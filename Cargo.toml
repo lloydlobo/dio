@@ -1,0 +1,2 @@
+[workspace]
+members = ["dio-server", "dio-cli"]
