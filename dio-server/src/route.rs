@@ -27,9 +27,19 @@ async fn get_fact(client: web::Data<Client>, path: web::Path<String>) -> impl Re
 }
 
 #[get("/facts")]
-async fn get_facts() -> impl Responder {
-    HttpResponse::Ok().json("Ok")
-    // let collection: Collection<Facts> = client.database(DB_NAME).collection(COLL_NAME_FACTS);
+async fn get_facts(client: web::Data<Client>) -> impl Responder {
+    let collection: Collection<Facts> = client.database(DB_NAME).collection(COLL_NAME_FACTS);
+    let find_all = collection.find(None, None).await;
+    match find_all {
+        Ok(mut stream) => {
+            let mut facts = Vec::new();
+            while let Some(fact) = stream.try_next().await.unwrap() {
+                facts.push(fact);
+            }
+            HttpResponse::Ok().json(facts)
+        }
+        Err(err) => HttpResponse::InternalServerError().body(err.to_string()),
+    }
     // dbg!(&collection);
     // let find_all = collection.find(None, None).await;
     // match find_all {
