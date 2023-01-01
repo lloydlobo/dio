@@ -1,6 +1,7 @@
-/// See https://github.com/Mr-Malomz/actix-mongo-api/blob/main/src/repository/mongodb_repo.rs.
+//! See [Reference source code](https://github.com/Mr-Malomz/actix-mongo-api/blob/main/src/repository/mongodb_repo.rs).
 use super::model::{Facts, Principles};
 use crate::util::get_env_var;
+use anyhow::Context;
 use dotenv::dotenv;
 use mongodb::{
     options::{ClientOptions, ResolverConfig},
@@ -9,6 +10,7 @@ use mongodb::{
 
 // use futures::stream::TryStreamExt;
 // See https://github.com/actix/examples/tree/master/databases/mongodb
+#[allow(unused)]
 pub struct DioDB {
     coll_facts: Collection<Facts>,
     coll_principles: Collection<Principles>,
@@ -19,6 +21,13 @@ impl DioDB {
         dotenv().ok();
 
         // Load the MongoDB connection string from an environment variable:
+        let client_uri = get_env_var("MONGODB_URI")
+            .context(
+                "MONGODB_URI environment variable not set. \
+                Please set the MONGODB_URI environment variable to the URI of your MongoDB instance \
+                (e.g. mongodb://localhost:27017).",
+            )
+            .expect("Should get environment variable for database URI.");
         let client_uri: String = get_env_var("MONGODB_URI").unwrap(); // let client_options = ClientOptions::parse(client_uri).await?; // let client = Client::with_options(client_options)?; // let database = client.database("testDB"); // println!("{:?}", &database);
 
         // Workaround for a DNS issue on Windows:
@@ -61,20 +70,37 @@ fn unwrap_failed_options(arg: &str, e: &mongodb::error::Error) -> ClientOptions 
 }
 
 fn unwrap_failed(arg: &str, e: &mongodb::error::Error) -> Client {
-    eprintln!("Failed to connect to MongoDB: {}. Error: {}", arg, e);
+    eprintln!("Failed to connect to MongoDB: {arg}. Error: {e}");
     std::process::exit(1);
 }
 
+/// .
+///
+/// # Panics
+///
+/// Panics if .
+#[allow(unused)]
 pub async fn print_db_coll_names(client: Client, db: &mongodb::Database) {
     // Print the databases in our MongoDB cluster:
     println!("Databases");
-    for name in client.list_database_names(None, None).await.unwrap() {
-        println!("- {}", name);
+    for name in client
+        .list_database_names(None, None)
+        .await
+        .context("Failed to list databases in the MongoDB cluster.")
+        .expect("Should get database names from the client.")
+    {
+        println!("- {name}");
     }
+
     // Print the collection in our "dio" MongoDB database in cluster:
     println!("Collections");
-    for collection_name in db.list_collection_names(None).await.unwrap() {
-        println!("- {}", collection_name);
+    for collection_name in db
+        .list_collection_names(None)
+        .await
+        .context("Failed to list collections in the MongoDB database.")
+        .expect("Should get collection names from the database.")
+    {
+        println!("- {collection_name}");
     }
 }
 

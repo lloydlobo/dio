@@ -1,10 +1,24 @@
-//! `util` contains common utility functions agnostice to the project.
+//! `util` contains common utility functions agnostic to the project.
+use anyhow::{Context, Result};
 use std::env;
 
-#[inline(always)]
-pub fn get_env_var(key: &str) -> Result<String, Box<dyn std::error::Error>> {
-    Ok(env::var(key)
-        .unwrap_or_else(|_| panic!("{}", format!("{} environment variable not set.", key))))
+/// .
+///
+/// # Panics
+///
+/// Panics if .
+///
+/// # Errors
+///
+/// This function will return an error if .
+//
+// .unwrap_or_else(|_| panic!("{}", format!("{} environment variable not set.", key)))
+// you have declared `#[inline(always)]` on `get_env_var`. This is usually a bad idea for further
+// information visit https://rust-lang.github.io/rust-clippy/master/index.html#inline_always
+// #[inline(always)]
+#[inline]
+pub fn get_env_var(key: &str) -> Result<String> {
+    env::var(key).context(format!("Could not find environment variable {key}"))
 }
 
 // mod generics {

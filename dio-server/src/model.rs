@@ -1,6 +1,6 @@
-//! 'model' contain MongoDB database models.
+//! 'model' contain `MongoDB` database models.
 
-use mongodb::bson::oid::ObjectId;
+// use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 /// The snippet above does the following:
