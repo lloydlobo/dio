@@ -46,8 +46,12 @@ async fn main() -> std::io::Result<()> {
     println!("Starting server on PORT {PORT}");
     let db_client: Client = DioDB::init().await;
 
-    HttpServer::new(move || App::new().app_data(actix_web::web::Data::new(db_client.clone())).configure(config))
-        .bind(("127.0.0.1", PORT))?
-        .run()
-        .await
+    HttpServer::new(move || {
+        App::new()
+            .app_data(actix_web::web::Data::new(db_client.clone()))
+            .configure(config)
+    })
+    .bind(("127.0.0.1", PORT))?
+    .run()
+    .await
 }

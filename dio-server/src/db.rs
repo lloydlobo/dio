@@ -28,24 +28,21 @@ impl DioDB {
                 (e.g. mongodb://localhost:27017).",
             )
             .expect("Should get environment variable for database URI.");
-        let client_uri: String = get_env_var("MONGODB_URI").unwrap(); // let client_options = ClientOptions::parse(client_uri).await?; // let client = Client::with_options(client_options)?; // let database = client.database("testDB"); // println!("{:?}", &database);
+        // dbg!(&client_uri);
 
         // Workaround for a DNS issue on Windows:
-        let options: ClientOptions = match ClientOptions::parse_with_resolver_config(
-            &client_uri,
-            ResolverConfig::cloudflare(),
-        )
-        .await
-        {
-            Ok(t) => t,
-            Err(e) => unwrap_failed_options("called `Result::unwrap()` on an `Err` value", &e),
-        };
+        let options: ClientOptions =
+            match ClientOptions::parse_with_resolver_config(&client_uri, ResolverConfig::cloudflare()).await {
+                Ok(t) => t,
+                Err(e) => unwrap_failed_options("called `Result::unwrap()` on an `Err` value", &e),
+            };
 
         // A Client is needed to connect to MongoDB:
         let client: Client = match Client::with_options(options) {
             Ok(t) => t,
             Err(e) => unwrap_failed("called `Result::unwrap()` on an `Err` value", &e),
         };
+        // dbg!(&client);
         client
 
         // let db: mongodb::Database = client.database("dio");
