@@ -52,7 +52,7 @@ where
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .title("Tabs"),
+                .title("Dio"),
         )
         .highlight_style(
             Style::default()
