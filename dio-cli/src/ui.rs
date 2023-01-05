@@ -198,13 +198,12 @@ where
     let len = facts.len();
     let mut text = Vec::<Spans>::with_capacity(len);
     (1..=len).for_each(|id: usize| {
-        text.push(Spans::from(format!(
-            "{id}. {fact}",
-            fact = facts
-                .get(&id.to_string())
-                .expect("Failed to get fact from facts map. This should never happen.")
-                .to_owned(),
-        )));
+        let fact: String = facts
+            .get(&id.to_string())
+            .expect("Failed to get fact from facts map. This should never happen.")
+            .to_owned();
+        let fact: &str = fact.split_terminator('.').collect::<Vec<_>>()[0];
+        text.push(Spans::from(format!("{id}. {fact}.")));
     });
     let block = Block::default()
         .title(Span::styled(
@@ -217,7 +216,6 @@ where
         .border_type(BorderType::Rounded)
         .border_style(Style::default());
     let paragraph = Paragraph::new(text).block(block).wrap(Wrap { trim: true });
-
     f.render_widget(paragraph, area);
 
     // let binding = gen_str(2usize);
@@ -235,13 +233,12 @@ where
     let len = principles.len();
     let mut text = Vec::<Spans>::with_capacity(len);
     (1..=len).for_each(|id: usize| {
-        text.push(Spans::from(format!(
-            "{id}. {principle}",
-            principle = principles
-                .get(&id.to_string())
-                .expect("Failed to get principle from principles map. This should never happen.")
-                .to_owned(),
-        )));
+        let principle: String = principles
+            .get(&id.to_string())
+            .expect("Failed to get principle from principles map. This should never happen.")
+            .to_owned();
+        let principle: &str = principle.split_terminator('.').collect::<Vec<_>>()[0];
+        text.push(Spans::from(format!("{id}. {principle}.",)));
     });
     let block = Block::default()
         .title(Span::styled(
@@ -355,6 +352,42 @@ where
 }
 
 // ----------------------------------------------------------------------------
+
+/// Enum for getting the position of a widget in a layout to draw in.
+///
+/// A chunk is usually a `tui::Rect` split from `Layout`.
+#[derive(Debug)]
+enum Chunk {
+    /// Index for `tui::widgets::Tabs` used for navigation.
+    Tabs,
+    /// Index for main body layout.
+    Body,
+    /// Index for preview of selected main items.
+    Preview,
+    /// Index for `tui::widget::gauge` for tick_rate progress.
+    Gauge,
+}
+
+/// Returns the index of the given chunk.
+///
+/// # Examples
+///
+/// ```
+/// use chunk::Chunk;
+///
+/// assert_eq!(index_from(Chunk::Tabs), 0usize);
+/// assert_eq!(index_from(Chunk::Body), 1usize);
+/// assert_eq!(index_from(Chunk::Preview), 2usize);
+/// assert_eq!(index_from(Chunk::Gauge), 3usize);
+/// ```
+fn index_from(chunk: Chunk) -> usize {
+    match chunk {
+        Chunk::Tabs => 0usize,
+        Chunk::Body => 1usize,
+        Chunk::Preview => 2usize,
+        Chunk::Gauge => 3usize,
+    }
+}
 
 /// Returns a centered rectangle that uses a certain percentage of the available rect `rect: Rect`.
 ///
@@ -480,41 +513,3 @@ where
         f.render_widget(block, area);
     }
 } */
-
-// ----------------------------------------------------------------------------
-
-/// Enum for getting the position of a widget in a layout to draw in.
-///
-/// A chunk is usually a `tui::Rect` split from `Layout`.
-#[derive(Debug)]
-enum Chunk {
-    /// Index for `tui::widgets::Tabs` used for navigation.
-    Tabs,
-    /// Index for main body layout.
-    Body,
-    /// Index for preview of selected main items.
-    Preview,
-    /// Index for `tui::widget::gauge` for tick_rate progress.
-    Gauge,
-}
-
-/// Returns the index of the given chunk.
-///
-/// # Examples
-///
-/// ```
-/// use chunk::Chunk;
-///
-/// assert_eq!(index_from(Chunk::Tabs), 0usize);
-/// assert_eq!(index_from(Chunk::Body), 1usize);
-/// assert_eq!(index_from(Chunk::Preview), 2usize);
-/// assert_eq!(index_from(Chunk::Gauge), 3usize);
-/// ```
-fn index_from(chunk: Chunk) -> usize {
-    match chunk {
-        Chunk::Tabs => 0usize,
-        Chunk::Body => 1usize,
-        Chunk::Preview => 2usize,
-        Chunk::Gauge => 3usize,
-    }
-}
