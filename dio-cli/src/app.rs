@@ -45,7 +45,7 @@ impl<'a> App<'a> {
             title,
             should_quit: false,
             tabs: TabsState::new(TITLES.to_vec()),
-            show_help_popup: true,
+            show_help_popup: false,
             progress: 0f64,
             facts: db.facts,
             principles: db.principles,
