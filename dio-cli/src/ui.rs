@@ -8,7 +8,7 @@ use std::{
 use tui::{
     self,
     backend::Backend,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
     widgets::{Block, BorderType, Borders, Clear, Gauge, List, ListItem, Paragraph, Tabs, Wrap},
@@ -92,7 +92,7 @@ where
         )
         .gauge_style(
             Style::default()
-                .fg(Color::Yellow)
+                .fg(Color::LightGreen)
                 .bg(Color::Reset)
                 .add_modifier(modifier(app.progress, Modifier::BOLD, Modifier::ITALIC)),
         )
@@ -162,6 +162,45 @@ fn draw_tab_0_home<B>(f: &mut tui::Frame<B>, app: &mut App, area: Rect)
 where
     B: Backend,
 {
+    f.render_widget(
+        Block::default()
+            .title(Span::styled(
+                "Home",
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            ))
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default()),
+        area,
+    );
+
+    let inline_center = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(
+            [
+                Constraint::Percentage(25u16),
+                Constraint::Percentage(50u16), // To be picked.
+                Constraint::Percentage(25u16),
+            ]
+            .as_ref(),
+        )
+        .split(area);
+    let grid_center = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Percentage(10u16),
+                Constraint::Percentage(20u16), // logo.
+                Constraint::Percentage(10u16),
+                Constraint::Percentage(50u16), // body.
+                Constraint::Percentage(10u16),
+            ]
+            .as_ref(),
+        )
+        .split(inline_center[1usize]);
+
     let items: Vec<ListItem> = app
         .shortcuts
         .items
@@ -186,7 +225,13 @@ where
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("> ");
-    f.render_stateful_widget(items, area, &mut app.shortcuts.state);
+    f.render_stateful_widget(items, grid_center[3usize], &mut app.shortcuts.state);
+
+    let paragraph = Paragraph::new(BANNER)
+        .block(Block::default())
+        .alignment(Alignment::Center)
+        .wrap(Wrap { trim: false });
+    f.render_widget(paragraph, grid_center[1usize]);
 }
 
 /// FACTS
@@ -203,7 +248,8 @@ where
             .expect("Failed to get fact from facts map. This should never happen.")
             .to_owned();
         let fact: &str = fact.split_terminator('.').collect::<Vec<_>>()[0];
-        text.push(Spans::from(format!("{id}. {fact}.")));
+        text.push(Spans::from(format!("{id:0>2}. {fact}.")));
+        // text.push(Spans::from(Span::raw("")));
     });
     let block = Block::default()
         .title(Span::styled(
@@ -217,11 +263,6 @@ where
         .border_style(Style::default());
     let paragraph = Paragraph::new(text).block(block).wrap(Wrap { trim: true });
     f.render_widget(paragraph, area);
-
-    // let binding = gen_str(2usize);
-    // let block = draw_footer(binding.as_str());
-
-    // f.render_widget(block, area);
 }
 
 /// PRINCIPLES
@@ -238,7 +279,8 @@ where
             .expect("Failed to get principle from principles map. This should never happen.")
             .to_owned();
         let principle: &str = principle.split_terminator('.').collect::<Vec<_>>()[0];
-        text.push(Spans::from(format!("{id}. {principle}.",)));
+        // [See for formatting digits](https://doc.rust-lang.org/std/fmt/index.html#syntax)
+        text.push(Spans::from(format!("{id:0>2}. {principle}.",)));
     });
     let block = Block::default()
         .title(Span::styled(
@@ -453,6 +495,20 @@ where
         m_2
     }
 }
+
+// ----------------------------------------------------------------------------
+
+/// [`banner`] is the CLI banner that appears at startup.
+///
+/// [Credits](https://fsymbols.com/generators/carty/).
+pub const BANNER: &str = "
+██████╗░██╗░█████╗
+██╔══██╗██║██╔══██╗
+██║░░██║██║██║░░██║
+██║░░██║██║██║░░██║
+██████╔╝██║╚█████╔╝
+╚═════╝░╚═╝░╚════╝░
+";
 
 // ----------------------------------------------------------------------------
 

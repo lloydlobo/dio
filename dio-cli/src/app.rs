@@ -13,7 +13,7 @@ const LIST_SHORTCUTS: [&str; 5] = [
     "Right - Next tab",
 ];
 
-const TITLES: [&str; 5] = ["Home", "Facts", "Principles", "Input", "Popup"];
+const TITLES: [&str; 4] = ["Home", "Facts", "Principles", "Input"];
 
 // ----------------------------------------------------------------------------
 
