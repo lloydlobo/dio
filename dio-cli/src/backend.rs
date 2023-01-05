@@ -1,12 +1,19 @@
 //! [`backend`] is `crossterm` backend.
 
-use crate::{app::App, db::DB, server, ui};
+use crate::{
+    app::{App, InputMode},
+    db::DB,
+    server, ui,
+};
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::time::{Duration, Instant};
+use std::{
+    string,
+    time::{Duration, Instant},
+};
 use tui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
@@ -57,7 +64,6 @@ where
 {
     // let daily_message: String = db::get_todays_fact_or_principle(db)?;
     let mut last_tick = Instant::now();
-
     loop {
         // `draw` - Synchronizes terminal size, calls the rendering closure, flushes the current
         // internal state and prepares for the next draw call.
@@ -69,23 +75,53 @@ where
 
         if crossterm::event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
-                match key.code {
-                    event::KeyCode::Char(c) => app.on_key(c),
-                    event::KeyCode::Left => app.on_left(),
-                    event::KeyCode::Right => app.on_right(),
-                    event::KeyCode::Up => app.on_up(),
-                    event::KeyCode::Down => app.on_down(),
-                    event::KeyCode::Esc => app.shortcuts.unselect(),
-                    _ => {}
+                match app.input_mode {
+                    InputMode::Normal => match key.code {
+                        KeyCode::Char('e') => {
+                            app.input_mode = InputMode::Editing;
+                        }
+                        KeyCode::Char(c) => {
+                            app.on_key(c);
+                        }
+                        KeyCode::Left => {
+                            app.on_left();
+                        }
+                        KeyCode::Right => {
+                            app.on_right();
+                        }
+                        KeyCode::Up => {
+                            app.on_up();
+                        }
+                        KeyCode::Down => app.on_down(),
+                        KeyCode::Esc => {
+                            app.shortcuts.unselect();
+                        }
+                        _ => {}
+                    },
+                    InputMode::Editing => match key.code {
+                        KeyCode::Enter => {
+                            let new: string::Drain = app.input.drain(..); // Removes the specified range from the string in bulk,
+                                                                          // returning all removed characters as an iterator.
+                            app.messages.push(new.collect());
+                        }
+                        KeyCode::Char(c) => {
+                            app.input.push(c);
+                        }
+                        KeyCode::Backspace => {
+                            app.input.pop();
+                        }
+                        KeyCode::Esc => {
+                            app.input_mode = InputMode::Normal;
+                        }
+                        _ => {}
+                    },
                 }
             }
         }
-
         if last_tick.elapsed() >= tick_rate {
             app.on_tick();
             last_tick = Instant::now();
         }
-
         if app.should_quit {
             return Ok(());
         }

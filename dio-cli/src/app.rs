@@ -4,8 +4,6 @@ use crate::db::DB;
 use std::collections::HashMap;
 use tui::widgets::ListState;
 
-/// Dummy List.
-const LIST_TASKS: [&str; 2] = ["Fact1", "Fact2"];
 /// Navigation and other app shortcuts.
 const LIST_SHORTCUTS: [&str; 5] = [
     "q - Exit",
@@ -14,7 +12,8 @@ const LIST_SHORTCUTS: [&str; 5] = [
     "Left - Previous tab",
     "Right - Next tab",
 ];
-const TITLES: [&str; 3] = ["Home", "Facts", "Principles"];
+
+const TITLES: [&str; 5] = ["Home", "Facts", "Principles", "Input", "Popup"];
 
 // ----------------------------------------------------------------------------
 
@@ -22,12 +21,18 @@ pub struct App<'a> {
     pub title: &'a str,
     pub should_quit: bool,
     pub tabs: TabsState<&'a str>,
-    show_help: bool,
+    pub show_help_popup: bool,
     pub progress: f64,
     pub facts: HashMap<String, String>,
     pub principles: HashMap<String, String>,
-    // pub tasks: StatefulList<&'a str>,
     pub shortcuts: StatefulList<&'a str>,
+    /// Current value of the input box.
+    pub input: String,
+    /// Current input mode.
+    pub input_mode: InputMode,
+    /// History of recorded messages.
+    pub messages: Vec<String>,
+    /// Enhanced TUI graphics. More CPU usage.
     pub enhanced_graphics: bool,
 }
 
@@ -40,12 +45,14 @@ impl<'a> App<'a> {
             title,
             should_quit: false,
             tabs: TabsState::new(TITLES.to_vec()),
-            show_help: true,
+            show_help_popup: true,
             progress: 0f64,
             facts: db.facts,
             principles: db.principles,
-            // tasks: StatefulList::with_items(LIST_TASKS.to_vec()),
             shortcuts: StatefulList::with_items(LIST_SHORTCUTS.to_vec()),
+            input: String::new(),
+            input_mode: InputMode::Normal,
+            messages: Vec::<String>::new(),
             enhanced_graphics,
         }
     }
@@ -62,7 +69,7 @@ impl<'a> App<'a> {
                 self.should_quit = true;
             }
             '?' => {
-                self.show_help = !self.show_help;
+                self.show_help_popup = !self.show_help_popup;
             }
             _ => {}
         }
@@ -171,7 +178,14 @@ impl<T> StatefulList<T> {
 
 // ----------------------------------------------------------------------------
 
-//
+/// User input mode like `vim`'s insert, visual, normal mode.
+pub enum InputMode {
+    /// No input recorded.
+    Normal,
+
+    /// Allow input to be recorded.
+    Editing,
+}
 
 // ----------------------------------------------------------------------------
 

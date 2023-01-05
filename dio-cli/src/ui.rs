@@ -1,15 +1,16 @@
 //! [`ui`] implements TUI.
 
-use crate::app::App;
+use crate::app::{self, App};
 use std::collections::HashMap;
 use tui::{
     self,
     backend::Backend,
-    layout::{Constraint, Layout},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Spans},
-    widgets::{Block, BorderType, Borders, List, ListItem, Paragraph, Tabs, Wrap},
+    text::{Span, Spans, Text},
+    widgets::{Block, BorderType, Borders, Clear, Gauge, List, ListItem, Paragraph, Tabs, Wrap},
 };
+use unicode_width::UnicodeWidthStr; // Determine displayed width of char and str types according to Unicode Standard Annex #11 rules.
 
 /// Draw the app tui.
 ///
@@ -21,9 +22,19 @@ pub fn draw<B>(f: &mut tui::Frame<B>, app: &mut App)
 where
     B: Backend,
 {
+    // Two chunks [0->Len 3, 1->Min 0]. 0 for tab, 1 for body.
     let chunks = Layout::default()
-        .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
-        .split(f.size()); // Two chunks [0->Len 3, 1->Min 0]. 0 for tab, 1 for body.
+        .constraints(
+            [
+                Constraint::Length(3),
+                Constraint::Min(0),
+                Constraint::Length(3),
+            ]
+            .as_ref(),
+        )
+        .split(f.size());
+
+    // Set the tabs of the app menu navigation.
     let titles: Vec<Spans> = app
         .tabs
         .titles
@@ -42,11 +53,120 @@ where
 
     // Draw the selected tab (page) and navigate to it.
     match app.tabs.index {
-        0 => draw_first_tab(f, app, chunks[1usize]),
-        1 => draw_second_tab(f, app, chunks[1usize]),
-        2 => draw_third_tab(f, app, chunks[1usize]),
+        0 => draw_tab_0_home(f, app, chunks[1usize]),
+        1 => draw_tab_1_facts(f, app, chunks[1usize]),
+        2 => draw_tab_2_principles(f, app, chunks[1usize]),
+        3 => draw_tab_3_inputs(f, app, chunks[1usize]),
+        4 => draw_tab_4_popup(f, app, chunks[1usize]),
         _ => {}
     }
+
+    // Track tick rate progress of the app. Resets again after a while.
+    let gauge = Gauge::default()
+        .block(Block::default().title("tick rate").borders(Borders::ALL))
+        .gauge_style(Style::default().fg(Color::Yellow))
+        .ratio(app.progress) // .percent(app.progress) // for u16.
+        .use_unicode(true);
+    f.render_widget(gauge, chunks[2usize]);
+}
+
+/// USER INPUTS
+///
+/// This is a very simple example:
+///   * A input box always focused. Every character you type is registered
+///   here
+///   * Pressing Backspace erases a character
+///   * Pressing Enter pushes the current input in the history of previous
+///   messages
+///
+/// [Reference](https://github.com/fdehau/tui-rs/blob/master/examples/user_input.rs)
+fn draw_tab_3_inputs<B>(f: &mut tui::Frame<B>, app: &mut App, area: Rect)
+where
+    B: Backend,
+{
+    let chunks = Layout::default()
+        .margin(2u16)
+        .constraints(
+            [
+                Constraint::Length(1u16),
+                Constraint::Length(3u16),
+                Constraint::Min(1),
+            ]
+            .as_ref(),
+        )
+        .split(area);
+
+    let (msg, style): (Vec<Span>, Style) = match app.input_mode {
+        app::InputMode::Normal => (
+            vec![
+                Span::raw("Press "),
+                Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" to exit, "),
+                Span::styled("e", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" to start editing."),
+            ],
+            Style::default().add_modifier(Modifier::RAPID_BLINK),
+        ),
+        app::InputMode::Editing => (
+            vec![
+                Span::raw("Press "),
+                Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" to stop editing, "),
+                Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" to record the message."),
+            ],
+            Style::default(),
+        ),
+    };
+    let mut text = Text::from(Spans::from(msg));
+    text.patch_style(style);
+    let help_message = Paragraph::new(text);
+    f.render_widget(help_message, chunks[0usize]);
+
+    let input = Paragraph::new(app.input.as_ref())
+        .style(match app.input_mode {
+            app::InputMode::Normal => Style::default(),
+            app::InputMode::Editing => Style::default().fg(Color::Yellow),
+        })
+        .block(Block::default().borders(Borders::ALL).title("Input"));
+    f.render_widget(input, chunks[1usize]);
+
+    match app.input_mode {
+        // Hide the cursor. `Frame` does this by default, so we don't need to do anything here.
+        app::InputMode::Normal => {}
+        // Make the cursor visible and ask tui-rs to put it at the specified coordinates after rendering.
+        app::InputMode::Editing => f.set_cursor(
+            // Put cursor past the end of the input text.
+            chunks[1].x + app.input.width() as u16 + 1u16,
+            // Move one line down, from the border to the input line.
+            chunks[1usize].y + 1u16,
+        ),
+    }
+
+    let messages: Vec<ListItem> = app
+        .messages
+        .iter()
+        .enumerate()
+        .map(|(i, m)| {
+            let content = vec![Spans::from(Span::raw(format!("{}: {}", i, m)))];
+            ListItem::new(content)
+        })
+        .collect();
+    let messages =
+        List::new(messages).block(Block::default().borders(Borders::ALL).title("Messages"));
+    f.render_widget(messages, chunks[2usize]);
+}
+
+fn draw_tab_4_popup<B>(f: &mut tui::Frame<B>, app: &mut App, area: Rect)
+where
+    B: Backend,
+{
+    // let chunks = Layout::default()
+    //     .direction(Direction::Vertical)
+    //     .margin(2)
+    //     .constraints([Constraint::Percentage(25u16), Constraint::Percentage(75u16)].as_ref())
+    //     .split(area);
+    draw_popup(f, app, area);
 }
 
 // ----------------------------------------------------------------------------
@@ -54,7 +174,7 @@ where
 /// HOME
 /// Iterate through all elements in the `shortcuts` app.
 /// Create a `List` from all list items and highlight the currently selected one.
-fn draw_first_tab<B>(f: &mut tui::Frame<B>, app: &mut App, area: tui::layout::Rect)
+fn draw_tab_0_home<B>(f: &mut tui::Frame<B>, app: &mut App, area: Rect)
 where
     B: Backend,
 {
@@ -82,12 +202,11 @@ where
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("> ");
-
     f.render_stateful_widget(items, area, &mut app.shortcuts.state);
 }
 
 /// FACTS
-fn draw_second_tab<B>(f: &mut tui::Frame<B>, app: &mut App, area: tui::layout::Rect)
+fn draw_tab_1_facts<B>(f: &mut tui::Frame<B>, app: &mut App, area: Rect)
 where
     B: Backend,
 {
@@ -123,7 +242,7 @@ where
 }
 
 /// PRINCIPLES
-fn draw_third_tab<B>(f: &mut tui::Frame<B>, app: &mut App, area: tui::layout::Rect)
+fn draw_tab_2_principles<B>(f: &mut tui::Frame<B>, app: &mut App, area: Rect)
 where
     B: Backend,
 {
@@ -171,3 +290,103 @@ where
 } */
 
 // ----------------------------------------------------------------------------
+
+/// Draws the popup.
+///
+/// # Arguments
+///
+/// * `f` - A mutable reference to the frame.
+/// * `app` - A mutable reference to the application.
+/// * `area` - The area to draw the popup in.
+///
+/// # Examples
+///
+/// ```
+/// use tui::widgets::{Block, Borders};
+///
+/// let block = Block::default().title("Popup").borders(Borders::ALL);
+/// ```
+fn draw_popup<B>(f: &mut tui::Frame<B>, app: &mut App, area: Rect)
+where
+    B: Backend,
+{
+    // let size: Rect = f.size();
+    let chunks: Vec<Rect> = Layout::default()
+        .constraints([Constraint::Percentage(20u16), Constraint::Percentage(80u16)].as_ref())
+        .split(area); // `split(size)`.
+
+    let text = if app.show_help_popup {
+        "Press ? to close the popup"
+    } else {
+        "Press ? to show the popup"
+    };
+    let paragraph = Paragraph::new(Span::styled(
+        text,
+        Style::default().add_modifier(Modifier::SLOW_BLINK),
+    ))
+    .alignment(Alignment::Center)
+    .wrap(Wrap { trim: true });
+    f.render_widget(paragraph, chunks[0usize]);
+
+    let block = Block::default()
+        .title("Content")
+        .borders(Borders::ALL)
+        .border_style(Style::default())
+        .style(Style::default().bg(Color::Blue));
+    f.render_widget(block, chunks[1usize]);
+
+    if app.show_help_popup {
+        let block = Block::default().title("Popup").borders(Borders::ALL);
+        let area: Rect = centered_rect(60u16, 20u16, area); // `60, 20, size`.
+
+        // `Clear` - A widget to clear/reset a certain area to allow overdrawing (e.g. for popups).
+        f.render_widget(Clear, area);
+        f.render_widget(block, area);
+    }
+}
+
+/// Returns a centered rectangle that uses a certain percentage of the available rect `rect: Rect`.
+///
+/// Use with popups.
+///
+/// # Arguments
+///
+/// * `percent_x` - The percentage of the width of the rectangle.
+/// * `percent_y` - The percentage of the height of the rectangle.
+/// * `rect` - The rectangle to be centered.
+///
+/// # Example
+///
+/// ```
+/// use tui::layout::{Constraint, Direction, Layout, Rect};
+///
+/// let rect = Rect::new(0, 0, 100, 100);
+/// let centered_rect = centered_rect(50, 50, rect);
+/// ```
+///
+/// [Reference](https://github.com/fdehau/tui-rs/blob/master/examples/popup.rs)
+fn centered_rect(percent_x: u16, percent_y: u16, rect: Rect) -> Rect {
+    let popup_layout: Vec<Rect> = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Percentage((100u16 - percent_y) / 2),
+                Constraint::Percentage(percent_y),
+                Constraint::Percentage((100u16 - percent_y) / 2),
+            ]
+            .as_ref(),
+        )
+        .split(rect);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(
+            [
+                Constraint::Percentage((100u16 - percent_x) / 2),
+                Constraint::Percentage(percent_x),
+                Constraint::Percentage((100u16 - percent_x) / 2),
+            ]
+            .as_ref(),
+        )
+        .split(popup_layout[1])[1]
+}
