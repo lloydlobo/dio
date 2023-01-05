@@ -60,16 +60,19 @@ where
                 .add_modifier(Modifier::BOLD),
         )
         .select(app.tabs.index);
-    f.render_widget(tabs, chunks[0usize]);
+    f.render_widget(tabs.clone(), chunks[index_from(Chunk::Tabs)]);
 
     // Draw the selected tab (page) and navigate to it.
     match app.tabs.index {
-        0 => draw_tab_0_home(f, app, chunks[1usize]),
-        1 => draw_tab_1_facts(f, app, chunks[1usize]),
-        2 => draw_tab_2_principles(f, app, chunks[1usize]),
-        3 => draw_tab_3_inputs(f, app, chunks[1usize]),
+        0 => draw_tab_0_home(f, app, chunks[(index_from(Chunk::Body))]),
+        1 => draw_tab_1_facts(f, app, chunks[(index_from(Chunk::Body))]),
+        2 => draw_tab_2_principles(f, app, chunks[(index_from(Chunk::Body))]),
+        3 => draw_tab_3_inputs(f, app, chunks[(index_from(Chunk::Body))]),
         _ => {}
     }
+
+    // Temporary rendering gauge. Add hover selected preview here. line in input messages.
+    f.render_widget(tabs, chunks[index_from(Chunk::Preview)]);
 
     // Track tick rate progress of the app. Resets again after a while.
     let gauge = Gauge::default()
@@ -95,10 +98,7 @@ where
         )
         .ratio(app.progress) // .percent(app.progress) // for u16.
         .use_unicode(true);
-    f.render_widget(gauge.clone(), chunks[3usize]);
-
-    // Temporary rendering guage. Add hover selected preview here. line in input messages.
-    f.render_widget(gauge, chunks[2usize]);
+    f.render_widget(gauge, chunks[index_from(Chunk::Gauge)]);
 
     // Help Popup uses the full layout and draws over everything.
     let rect = Layout::default()
@@ -480,3 +480,41 @@ where
         f.render_widget(block, area);
     }
 } */
+
+// ----------------------------------------------------------------------------
+
+/// Enum for getting the position of a widget in a layout to draw in.
+///
+/// A chunk is usually a `tui::Rect` split from `Layout`.
+#[derive(Debug)]
+enum Chunk {
+    /// Index for `tui::widgets::Tabs` used for navigation.
+    Tabs,
+    /// Index for main body layout.
+    Body,
+    /// Index for preview of selected main items.
+    Preview,
+    /// Index for `tui::widget::gauge` for tick_rate progress.
+    Gauge,
+}
+
+/// Returns the index of the given chunk.
+///
+/// # Examples
+///
+/// ```
+/// use chunk::Chunk;
+///
+/// assert_eq!(index_from(Chunk::Tabs), 0usize);
+/// assert_eq!(index_from(Chunk::Body), 1usize);
+/// assert_eq!(index_from(Chunk::Preview), 2usize);
+/// assert_eq!(index_from(Chunk::Gauge), 3usize);
+/// ```
+fn index_from(chunk: Chunk) -> usize {
+    match chunk {
+        Chunk::Tabs => 0usize,
+        Chunk::Body => 1usize,
+        Chunk::Preview => 2usize,
+        Chunk::Gauge => 3usize,
+    }
+}
