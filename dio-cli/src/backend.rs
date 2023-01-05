@@ -75,6 +75,7 @@ where
                     event::KeyCode::Right => app.on_right(),
                     event::KeyCode::Up => app.on_up(),
                     event::KeyCode::Down => app.on_down(),
+                    event::KeyCode::Esc => app.shortcuts.unselect(),
                     _ => {}
                 }
             }

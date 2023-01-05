@@ -4,6 +4,18 @@ use crate::db::DB;
 use std::collections::HashMap;
 use tui::widgets::ListState;
 
+/// Dummy List.
+const LIST_TASKS: [&str; 2] = ["Fact1", "Fact2"];
+/// Navigation and other app shortcuts.
+const LIST_SHORTCUTS: [&str; 5] = [
+    "q - Exit",
+    "? - Help Popup",
+    "Esc - unselect",
+    "Left - Previous tab",
+    "Right - Next tab",
+];
+const TITLES: [&str; 3] = ["Home", "Facts", "Principles"];
+
 // ----------------------------------------------------------------------------
 
 pub struct App<'a> {
@@ -14,14 +26,13 @@ pub struct App<'a> {
     pub progress: f64,
     pub facts: HashMap<String, String>,
     pub principles: HashMap<String, String>,
-    pub tasks: StatefulList<&'a str>,
+    // pub tasks: StatefulList<&'a str>,
+    pub shortcuts: StatefulList<&'a str>,
     pub enhanced_graphics: bool,
 }
 
 /// Facts page, Principles page. Each have lists of condensed titles.
 /// When one sleects a item, it expands. or opens a dialog buffer.
-const TASKS: [&str; 2] = ["Fact1", "Fact2"];
-const TITLES: [&str; 3] = ["Home", "Facts", "Principles"];
 
 impl<'a> App<'a> {
     pub fn new(title: &'a str, db: DB, enhanced_graphics: bool) -> Self {
@@ -33,7 +44,8 @@ impl<'a> App<'a> {
             progress: 0f64,
             facts: db.facts,
             principles: db.principles,
-            tasks: StatefulList::with_items(TASKS.to_vec()),
+            // tasks: StatefulList::with_items(LIST_TASKS.to_vec()),
+            shortcuts: StatefulList::with_items(LIST_SHORTCUTS.to_vec()),
             enhanced_graphics,
         }
     }
@@ -62,10 +74,10 @@ impl<'a> App<'a> {
         self.tabs.next();
     }
     pub fn on_up(&mut self) {
-        self.tasks.previous();
+        self.shortcuts.previous();
     }
     pub fn on_down(&mut self) {
-        self.tasks.next();
+        self.shortcuts.next();
     }
 }
 
@@ -119,8 +131,13 @@ pub struct StatefulList<T> {
 impl<T> StatefulList<T> {
     pub fn next(&mut self) {
         let index: usize = match self.state.selected() {
-            Some(i) if i >= (self.items.len() - 1usize) => 0usize,
-            Some(i) => i + 1usize,
+            Some(i) => {
+                if i >= (self.items.len() - 1usize) {
+                    0usize
+                } else {
+                    i + 1usize
+                }
+            }
             None => 0usize,
         };
         self.state.select(Some(index));
@@ -128,8 +145,13 @@ impl<T> StatefulList<T> {
 
     pub fn previous(&mut self) {
         let index = match self.state.selected() {
-            Some(i) if i == 0 => self.items.len() - 1usize,
-            Some(i) => i - 1usize,
+            Some(i) => {
+                if i == 0usize {
+                    self.items.len() - 1usize
+                } else {
+                    i - 1usize
+                }
+            }
             None => 0usize,
         };
         self.state.select(Some(index));
@@ -140,6 +162,10 @@ impl<T> StatefulList<T> {
             state: ListState::default(),
             items,
         }
+    }
+
+    pub fn unselect(&mut self) {
+        self.state.select(None);
     }
 }
 

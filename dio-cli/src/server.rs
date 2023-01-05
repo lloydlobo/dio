@@ -48,23 +48,23 @@ pub async fn get_server_data() -> Result<(HashMap<String, String>, HashMap<Strin
 }
 
 mod concurrency {
-    use rayon::prelude::*;
-    use tokio::sync::oneshot;
+    // use rayon::prelude::*;
+    // use tokio::sync::oneshot;
 
-    /// We will use the sum of a large list as an example of an expensive computation, but note that
-    /// in practice, unless the array is very very large, just computing a sum is probably cheap
-    /// enough that you can just do it directly in Tokio.
-    ///
-    /// The main danger of using rayon is that you must be careful not to block the thread while
-    /// waiting for rayon to complete. To do this, combine rayon::spawn with tokio::sync::oneshot
-    /// like this:
-    ///
-    /// [Reference](https://ryhl.io/blog/async-what-is-blocking/)
-    ///
-    /// # Panics
-    ///
-    /// Panics if .
-    pub async fn parallel_sums(nums: Vec<i32>) -> i32 {
+    // We will use the sum of a large list as an example of an expensive computation, but note that
+    // in practice, unless the array is very very large, just computing a sum is probably cheap
+    // enough that you can just do it directly in Tokio.
+    //
+    // The main danger of using rayon is that you must be careful not to block the thread while
+    // waiting for rayon to complete. To do this, combine rayon::spawn with tokio::sync::oneshot
+    // like this:
+    //
+    // [Reference](https://ryhl.io/blog/async-what-is-blocking/)
+    //
+    // # Panics
+    //
+    // Panics if .
+    /* pub async fn parallel_sums(nums: Vec<i32>) -> i32 {
         let (send, recv): (oneshot::Sender<i32>, oneshot::Receiver<i32>) = oneshot::channel();
 
         // Spawn a task on rayon.
@@ -81,15 +81,15 @@ mod concurrency {
 
         // Wait for the rayon task.
         recv.await.expect("Panic in rayon::spawn")
-    }
+    } */
 
-    /// This uses the rayon thread pool to run the expensive operation. Be aware that the above example
-    /// uses only one thread in the rayon thread pool per call to parallel_sum. This makes sense if you
-    /// have many calls to parallel_sum in your application, but it is also possible to use rayon's
-    /// parallel iterators to compute the sum on several threads:
-    ///
-    /// [Reference](https://ryhl.io/blog/async-what-is-blocking/)
-    pub async fn parallel_sums_par(nums: Vec<i32>) -> i32 {
+    // This uses the rayon thread pool to run the expensive operation. Be aware that the above example
+    // uses only one thread in the rayon thread pool per call to parallel_sum. This makes sense if you
+    // have many calls to parallel_sum in your application, but it is also possible to use rayon's
+    // parallel iterators to compute the sum on several threads:
+    //
+    // [Reference](https://ryhl.io/blog/async-what-is-blocking/)
+    /* pub async fn parallel_sums_par(nums: Vec<i32>) -> i32 {
         let (send, recv): (oneshot::Sender<i32>, oneshot::Receiver<i32>) = oneshot::channel();
 
         // Spawn a task on rayon.
@@ -104,5 +104,5 @@ mod concurrency {
 
         // Wait for the rayon task.
         recv.await.expect("Panic in rayon::spawn")
-    }
+    } */
 }

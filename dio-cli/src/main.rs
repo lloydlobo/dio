@@ -37,12 +37,11 @@ struct Cli {
 /// This function will return an error if .
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    println!("Gloria In Excelsis Deo!");
-
     let cli: Cli = argh::from_env();
     let tick_rate = std::time::Duration::from_millis(cli.tick_rate);
 
     backend::run(tick_rate, cli.enhanced_graphics).await?;
+
     Ok(())
 }
 
