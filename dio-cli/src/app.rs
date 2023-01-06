@@ -28,6 +28,7 @@ pub enum TabMode<'a> {
     Facts(usize, &'a str),
     Principles(usize, &'a str),
     Input(usize, &'a str),
+    PopupHelp(usize, &'a str),
 }
 
 // ----------------------------------------------------------------------------
@@ -42,6 +43,9 @@ pub struct App<'a> {
     pub tabs: TabsState<TabMode<'a>>,
     /// '?' activates the help popup modal.
     pub show_help_popup: bool,
+    /// If popup opens, the state forgets what tab it was open on.
+    /// FIXME: Code smell. Use popup state as a Tab and do not render as tab in ui.
+    // pub cache_prev_list_on_popup: ListName,
     /// The `tick_rate' of the application.
     pub progress: f64,
     /// List from database.
@@ -56,16 +60,19 @@ pub struct App<'a> {
     pub list_tabs: StatefulList<&'a str>,
     /// List of keys associated to action.
     pub list_help: StatefulList<&'a str>,
+    /// The current selected active list.
+    pub selected_list: ListName,
     /// Current value of the input box.
     pub input: String,
     /// Previews list items when hovered, or selected.
-    pub preview_list: String,
+    pub preview_item: String,
     /// Current input mode.
     pub input_mode: InputMode,
     /// History of recorded messages.
     pub messages: Vec<String>,
     /// Enhanced TUI graphics. More CPU usage.
     pub enhanced_graphics: bool,
+    pub cache_list_prior_popup: ListName,
 }
 
 fn get_map_val(hash: &HashMap<String, String>) -> Vec<&str> {
@@ -86,7 +93,8 @@ impl<'a> App<'a> {
                 TabMode::Home(_, t)
                 | TabMode::Facts(_, t)
                 | TabMode::Principles(_, t)
-                | TabMode::Input(_, t) => *t,
+                | TabMode::Input(_, t)
+                | TabMode::PopupHelp(_, t) => *t,
             })
             .collect();
 
@@ -98,15 +106,20 @@ impl<'a> App<'a> {
             progress: 0f64,
             facts: db.facts.to_owned(),
             principles: db.principles.to_owned(),
-            list_facts: StatefulList::with_items(get_map_val(&db.facts)),
-            list_principles: StatefulList::with_items(get_map_val(&db.principles)),
-            list_tabs: StatefulList::with_items(l_tabs),
-            list_help: StatefulList::with_items(LIST_SHORTCUTS.to_vec()),
+            list_facts: StatefulList::with_items(get_map_val(&db.facts), ListName::Facts),
+            list_principles: StatefulList::with_items(
+                get_map_val(&db.principles),
+                ListName::Principles,
+            ),
+            list_tabs: StatefulList::with_items(l_tabs, ListName::Tabs),
+            list_help: StatefulList::with_items(LIST_SHORTCUTS.to_vec(), ListName::Help),
             input: String::new(),
             input_mode: InputMode::Normal,
             messages: Vec::<String>::new(),
-            preview_list: String::new(),
+            preview_item: String::new(),
             enhanced_graphics,
+            selected_list: ListName::None,
+            cache_list_prior_popup: ListName::None,
         }
     }
     pub fn on_tick(&mut self) {
@@ -122,17 +135,31 @@ impl<'a> App<'a> {
                 self.should_quit = true;
             }
             '?' => {
+                self.cache_list_prior_popup = self.selected_list.clone();
                 self.show_help_popup = !self.show_help_popup;
+                if !self.show_help_popup {
+                    self.selected_list = self.cache_list_prior_popup.clone();
+                }
             }
             _ => {}
         }
     }
 
+    fn close_popup_on_tab_change(&mut self) {
+        if self.show_help_popup {
+            self.show_help_popup = !self.show_help_popup;
+        }
+    }
+
     pub fn on_left(&mut self) {
         self.tabs.previous();
+        self.assign_cur_list_with_tab();
+        self.close_popup_on_tab_change();
     }
     pub fn on_right(&mut self) {
         self.tabs.next();
+        self.assign_cur_list_with_tab();
+        self.close_popup_on_tab_change();
     }
 
     pub fn on_up(&mut self) {
@@ -146,22 +173,30 @@ impl<'a> App<'a> {
                 TabMode::Facts(_, _) => {
                     self.list_facts.previous();
                     if let Some(idx) = self.list_facts.state.selected() {
-                        self.preview_list = self.list_facts.items[idx].to_string();
+                        self.preview_item = self.list_facts.items[idx].to_string();
                     }
                 }
                 TabMode::Principles(_, _) => {
                     self.list_principles.previous();
                     if let Some(idx) = self.list_principles.state.selected() {
-                        self.preview_list = self.list_principles.items[idx].to_string();
+                        self.preview_item = self.list_principles.items[idx].to_string();
                     }
                 }
                 TabMode::Input(_, _) => {}
+                TabMode::PopupHelp(_, _) => {
+                    self.list_help.previous();
+                    if let Some(idx) = self.list_help.state.selected() {
+                        self.preview_item = self.list_help.items[idx].to_string();
+                    }
+                }
             };
+            self.assign_cur_list_with_tab();
         }
     }
     pub fn on_down(&mut self) {
         if self.show_help_popup {
             self.list_help.next();
+            self.selected_list = self.list_help.name.clone();
         } else {
             match self.current_tab_mode() {
                 TabMode::Home(_, _) => {
@@ -170,17 +205,32 @@ impl<'a> App<'a> {
                 TabMode::Facts(_, _) => {
                     self.list_facts.next();
                     if let Some(idx) = self.list_facts.state.selected() {
-                        self.preview_list = self.list_facts.items[idx].to_string();
+                        self.preview_item = self.list_facts.items[idx].to_string();
                     }
                 }
                 TabMode::Principles(_, _) => {
                     self.list_principles.next();
                     if let Some(idx) = self.list_principles.state.selected() {
-                        self.preview_list = self.list_principles.items[idx].to_string();
+                        self.preview_item = self.list_principles.items[idx].to_string();
                     }
                 }
                 TabMode::Input(_, _) => {}
+                TabMode::PopupHelp(_, _) => {
+                    self.list_help.next();
+                    if let Some(idx) = self.list_help.state.selected() {
+                        self.preview_item = self.list_help.items[idx].to_string();
+                    }
+                }
             };
+            self.assign_cur_list_with_tab();
+        }
+    }
+
+    /// Go to the tab index of associated tab titles in a list when selected.
+    /// Using it with `KeyCode::Enter` in `InputMode::Normal`.
+    pub fn jump_to_tab(&mut self) {
+        if let Some(index) = self.list_tabs.state.selected() {
+            self.tabs.index = index
         }
     }
 
@@ -190,12 +240,24 @@ impl<'a> App<'a> {
         self.tabs.titles.to_vec()[self.tabs.index].to_owned()
     }
 
-    /// Go to the tab index of associated tab titles in a list when selected.
-    /// Using it with `KeyCode::Enter` in `InputMode::Normal`.
-    pub fn jump_to_tab(&mut self) {
-        if let Some(index) = self.list_tabs.state.selected() {
-            self.tabs.index = index
-        }
+    /// If principles list was the last selected. but now we are on facts.
+    /// Pressing Esc will reset the tab where we are.
+    fn assign_cur_list_with_tab(&mut self) {
+        match self.current_tab_mode() {
+            TabMode::Home(_, _) => {
+                self.selected_list = self.list_tabs.name.clone();
+            }
+            TabMode::Facts(_, _) => {
+                self.selected_list = self.list_facts.name.clone();
+            }
+            TabMode::Principles(_, _) => {
+                self.selected_list = self.list_principles.name.clone();
+            }
+            TabMode::Input(_, _) => {}
+            TabMode::PopupHelp(_, _) => {
+                self.selected_list = self.list_help.name.clone();
+            }
+        };
     }
 }
 
@@ -239,9 +301,26 @@ impl<T> TabsState<T> {
 
 // ----------------------------------------------------------------------------
 
+/// Reference of lists that are instances of `StatefulList`.
+#[derive(Debug, Clone)]
+pub enum ListName {
+    /// `List` of facts.
+    Facts,
+    /// `List` of principles.
+    Principles,
+    /// `List` of help shortcuts.
+    Help,
+    /// `List` of tabs.
+    Tabs,
+    /// No active lists in view, current tab, or selected.
+    None,
+}
+
+#[derive(Debug)]
 pub struct StatefulList<T> {
     pub state: ListState,
     pub items: Vec<T>,
+    pub name: ListName,
 }
 
 impl<T> StatefulList<T> {
@@ -273,10 +352,11 @@ impl<T> StatefulList<T> {
         self.state.select(Some(index));
     }
 
-    pub fn with_items(items: Vec<T>) -> Self {
+    pub fn with_items(items: Vec<T>, list_name: ListName) -> Self {
         Self {
             state: ListState::default(),
             items,
+            name: list_name,
         }
     }
 

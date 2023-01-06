@@ -1,7 +1,7 @@
 //! [`backend`] is `crossterm` backend.
 
 use crate::{
-    app::{self, App, InputMode},
+    app::{self, App, InputMode, ListName},
     db::DB,
     server, ui,
 };
@@ -80,24 +80,38 @@ where
                         KeyCode::Char('e') => {
                             app.input_mode = InputMode::Editing;
                         }
-                        KeyCode::Char(c) => {
-                            app.on_key(c);
-                        }
-                        KeyCode::Left => {
+                        KeyCode::Left | KeyCode::Char('h') => {
                             app.on_left();
                         }
-                        KeyCode::Right => {
+                        KeyCode::Right | KeyCode::Char('l') => {
                             app.on_right();
                         }
-                        KeyCode::Up => {
+                        KeyCode::Up | KeyCode::Char('k') => {
                             app.on_up();
                         }
-                        KeyCode::Down => app.on_down(),
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            app.on_down();
+                        }
                         KeyCode::Esc => {
-                            app.list_help.unselect();
+                            if let ListName::Help = app.selected_list {
+                                app.list_help.unselect();
+                                app.show_help_popup = false;
+                                app.selected_list = app.cache_list_prior_popup.to_owned();
+                            } else {
+                                match app.selected_list {
+                                    ListName::Facts => app.list_facts.unselect(),
+                                    ListName::Principles => app.list_principles.unselect(),
+                                    ListName::Help => app.list_help.unselect(),
+                                    ListName::Tabs => app.list_tabs.unselect(),
+                                    ListName::None => {}
+                                }
+                            }
                         }
                         KeyCode::Enter => {
                             app.jump_to_tab();
+                        }
+                        KeyCode::Char(c) => {
+                            app.on_key(c);
                         }
                         _ => {}
                     },

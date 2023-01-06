@@ -44,20 +44,28 @@ where
         .split(f.size());
 
     // Set the tabs of the app menu navigation.
-    let titles: Vec<Spans> = app
+    let titles = app
         .tabs
         .titles
         .iter()
-        // .filter(|tab| !matches!(tab, app::TabMode::Popup))
-        .map(|tab| match tab {
-            app::TabMode::Home(_i, t)
-            | app::TabMode::Facts(_i, t)
-            | app::TabMode::Principles(_i, t)
-            | app::TabMode::Input(_i, t) => {
-                Spans::from(Span::styled(*t, Style::default().fg(Color::Cyan)))
-            }
+        .filter_map(|tab| match tab {
+            app::TabMode::Home(_, t) => Some(Cow::from(*t)),
+            app::TabMode::Facts(_, t) => Some(Cow::from(*t)),
+            app::TabMode::Principles(_, t) => Some(Cow::from(*t)),
+            app::TabMode::Input(_, t) => Some(Cow::from(*t)),
+            app::TabMode::PopupHelp(_, _t) => None,
         })
-        .collect();
+        .map(|t| {
+            Spans::from(Span::styled(
+                if t.len() > 1 {
+                    t.to_string()
+                } else {
+                    String::new()
+                },
+                Style::default().fg(Color::Cyan),
+            ))
+        })
+        .collect::<Vec<_>>();
     let tabs = Tabs::new(titles)
         .block(
             Block::default()
@@ -83,7 +91,7 @@ where
     }
 
     // Add hover selected preview here like `ranger`. line in input messages.
-    let preview = Paragraph::new(app.preview_list.to_string()) // .scroll((0, 0))
+    let preview = Paragraph::new(app.preview_item.to_string()) // .scroll((0, 0))
         .block(
             Block::default()
                 .title(Span::styled(
@@ -234,12 +242,17 @@ where
         .tabs
         .titles
         .iter()
+        // .filter(|item| match item {
+        //     app::TabMode::PopupHelp(_, _) => false,
+        //     _ => true,
+        // })
         .map(|item| {
             let item: &str = match item {
                 app::TabMode::Home(_i, t)
                 | app::TabMode::Facts(_i, t)
                 | app::TabMode::Principles(_i, t)
                 | app::TabMode::Input(_i, t) => t,
+                app::TabMode::PopupHelp(_, t) => t,
             };
             ListItem::new(vec![Spans::from(item)])
                 .style(Style::default().fg(Color::White).bg(Color::Reset))
