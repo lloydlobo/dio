@@ -13,19 +13,45 @@ const LIST_SHORTCUTS: [&str; 5] = [
     "Right - Next tab",
 ];
 
-const TITLES: [&str; 4] = ["Home", "Facts", "Principles", "Input"];
+// const TITLES: [&str; 4] = ["Home", "Facts", "Principles", "Input"];
+const TAB_TITLES: [TabMode; 4] = [
+    TabMode::Home(0usize, "Home"),
+    TabMode::Facts(1usize, "Facts"),
+    TabMode::Principles(2usize, "Principles"),
+    TabMode::Input(3usize, "Input"),
+];
+
+/// Index of tab in application and title.
+#[derive(Debug, Clone)]
+pub enum TabMode<'a> {
+    Home(usize, &'a str),
+    Facts(usize, &'a str),
+    Principles(usize, &'a str),
+    Input(usize, &'a str),
+}
 
 // ----------------------------------------------------------------------------
 
+/// The applications state.
 pub struct App<'a> {
+    /// Title of the application.
     pub title: &'a str,
+    /// To quit or not to quit. Activated with 'q'.
     pub should_quit: bool,
-    pub tabs: TabsState<&'a str>,
+    /// Tabs or navigation routes of the app.
+    pub tabs: TabsState<TabMode<'a>>,
+    /// '?' activates the help popup modal.
     pub show_help_popup: bool,
+    /// The `tick_rate' of the application.
     pub progress: f64,
+    /// List from database.
     pub facts: HashMap<String, String>,
+    /// List from database.
     pub principles: HashMap<String, String>,
-    pub shortcuts: StatefulList<&'a str>,
+    /// List of keys associated to action.
+    pub shortcuts_help: StatefulList<&'a str>,
+    /// List of keys associated to action.
+    pub shortcuts_tabs: StatefulList<&'a str>,
     /// Current value of the input box.
     pub input: String,
     /// Current input mode.
@@ -37,19 +63,29 @@ pub struct App<'a> {
 }
 
 /// Facts page, Principles page. Each have lists of condensed titles.
-/// When one sleects a item, it expands. or opens a dialog buffer.
+/// When one selects a item, it expands. or opens a dialog buffer.
 
 impl<'a> App<'a> {
     pub fn new(title: &'a str, db: DB, enhanced_graphics: bool) -> Self {
+        let list_tabs: Vec<&str> = TAB_TITLES
+            .iter()
+            .map(|tab| match tab {
+                TabMode::Home(_, t)
+                | TabMode::Facts(_, t)
+                | TabMode::Principles(_, t)
+                | TabMode::Input(_, t) => *t,
+            })
+            .collect();
         Self {
             title,
             should_quit: false,
-            tabs: TabsState::new(TITLES.to_vec()),
+            tabs: TabsState::new(TAB_TITLES.to_vec()),
             show_help_popup: false,
             progress: 0f64,
             facts: db.facts,
             principles: db.principles,
-            shortcuts: StatefulList::with_items(LIST_SHORTCUTS.to_vec()),
+            shortcuts_help: StatefulList::with_items(LIST_SHORTCUTS.to_vec()),
+            shortcuts_tabs: StatefulList::with_items(list_tabs),
             input: String::new(),
             input_mode: InputMode::Normal,
             messages: Vec::<String>::new(),
@@ -74,21 +110,58 @@ impl<'a> App<'a> {
             _ => {}
         }
     }
+
     pub fn on_left(&mut self) {
         self.tabs.previous();
     }
     pub fn on_right(&mut self) {
         self.tabs.next();
     }
+
+    // TODO: Either remove ListState from popup help items,
+    // or add a mode so that if popup is active then keys are directed towards there.
     pub fn on_up(&mut self) {
-        self.shortcuts.previous();
+        if self.show_help_popup {
+            self.shortcuts_help.previous();
+        } else {
+            match self.current_tab_mode() {
+                TabMode::Home(_, _) => self.shortcuts_tabs.previous(),
+                TabMode::Principles(_, _) => {}
+                TabMode::Facts(_, _) => {}
+                TabMode::Input(_, _) => {}
+            };
+        }
     }
     pub fn on_down(&mut self) {
-        self.shortcuts.next();
+        if self.show_help_popup {
+            self.shortcuts_help.next();
+        } else {
+            match self.current_tab_mode() {
+                TabMode::Home(_, _) => self.shortcuts_tabs.next(),
+                TabMode::Principles(_, _) => {}
+                TabMode::Facts(_, _) => {}
+                TabMode::Input(_, _) => {}
+            };
+        }
+    }
+
+    /// If we are on current tab then get that tab and
+    /// apply key press action relevant to that tab only.
+    fn current_tab_mode(&mut self) -> TabMode {
+        self.tabs.titles.to_vec()[self.tabs.index].to_owned()
+    }
+
+    /// Go to the tab index of associated tab titles in a list when selected.
+    /// Using it with `KeyCode::Enter` in `InputMode::Normal`.
+    pub fn jump_to_tab(&mut self) {
+        if let Some(index) = self.shortcuts_tabs.state.selected() {
+            self.tabs.index = index
+        }
     }
 }
 
 // ----------------------------------------------------------------------------
+//
 
 pub struct TabsState<T> {
     /// Title of the tab.
@@ -99,23 +172,16 @@ pub struct TabsState<T> {
 }
 
 impl<T> TabsState<T> {
-    pub fn new(titles: Vec<T>) -> Self {
+    pub fn new(tabs: Vec<T>) -> Self {
         Self {
-            titles,
+            titles: tabs,
             index: 0usize,
         }
     }
 
-    // fn new(titles: Vec<&'a str>) -> Self {
-    //     Self {
-    //         titles: TITLES,
-    //         index: 0usize,
-    //     }
-    // }
-
     fn next(&mut self) {
         let len_total = self.titles.len();
-        self.index = (self.index + 1usize) % len_total
+        self.index = (self.index + 1usize) % len_total;
     }
 
     fn previous(&mut self) {
@@ -125,6 +191,10 @@ impl<T> TabsState<T> {
             let len_total = self.titles.len();
             self.index = len_total - 1usize;
         }
+    }
+
+    pub fn cur_list_item_idx(&mut self) -> usize {
+        self.index
     }
 }
 
@@ -196,3 +266,28 @@ mod tests {
     #[test]
     fn it_selects_next_tab_state() {}
 } */
+
+// let tabs = self .tabs .titles .iter() .map(|t| t.clone()) .collect::<Vec<_>>();
+// 0 => self.facts.on_up(),
+// 1 => self.principles.on_up(),
+// 2 => self.shortcuts.on_up(),
+// _ => {}
+// TabMode::Home(, )
+//
+// match self
+//     .tabs
+//     .titles
+//     .iter()
+//     .map(|tab| match tab {
+//         TabMode::Home(_, _) => todo!(),
+//         TabMode::Principles(_, _) => todo!(),
+//         TabMode::Facts(_, _) => todo!(),
+//         TabMode::Input(_, _) => todo!(),
+//     })
+//     .collect::<Vec<_>>()[self.tabs.index]
+// {
+//     TabMode::Home(_, _) => todo!(),
+//     TabMode::Principles(_, _) => todo!(),
+//     TabMode::Facts(_, _) => todo!(),
+//     TabMode::Input(_, _) => todo!(),
+// };

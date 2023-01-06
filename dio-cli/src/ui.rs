@@ -2,6 +2,7 @@
 
 use crate::app::{self, App};
 use std::{
+    borrow::Cow,
     collections::HashMap,
     fmt::{Binary, Debug, LowerHex, Octal, UpperHex},
 };
@@ -29,6 +30,7 @@ where
 {
     // Two chunks [0->Len 3, 1->Min 0]. 0 for tab, 1 for body.
     let chunks = Layout::default()
+        .margin(0u16)
         .constraints(
             [
                 Constraint::Length(3), // Tabs.
@@ -45,7 +47,15 @@ where
         .tabs
         .titles
         .iter()
-        .map(|t| Spans::from(Span::styled(*t, Style::default().fg(Color::Cyan))))
+        // .filter(|tab| !matches!(tab, app::TabMode::Popup))
+        .map(|tab| match tab {
+            app::TabMode::Home(_i, t)
+            | app::TabMode::Facts(_i, t)
+            | app::TabMode::Principles(_i, t)
+            | app::TabMode::Input(_i, t) => {
+                Spans::from(Span::styled(*t, Style::default().fg(Color::Cyan)))
+            }
+        })
         .collect();
     let tabs = Tabs::new(titles)
         .block(
@@ -122,7 +132,7 @@ where
     B: Backend,
 {
     let items: Vec<ListItem> = app
-        .shortcuts
+        .shortcuts_help
         .items
         .iter()
         .map(|item| {
@@ -149,7 +159,7 @@ where
     if app.show_help_popup {
         let area: Rect = centered_rect(60u16, 20u16, area); // `60, 20, size`.
         f.render_widget(Clear, area); // `Clear` - A widget to clear/reset a certain area to allow overdrawing (e.g. for popups).
-        f.render_stateful_widget(items, area, &mut app.shortcuts.state);
+        f.render_stateful_widget(items, area, &mut app.shortcuts_help.state);
     }
 }
 
@@ -176,7 +186,7 @@ where
         area,
     );
 
-    let inline_center = Layout::default()
+    let inline_center_layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(
             [
@@ -187,33 +197,44 @@ where
             .as_ref(),
         )
         .split(area);
-    let grid_center = Layout::default()
+    let grid_center_layout = Layout::default()
+        .vertical_margin(2u16)
         .direction(Direction::Vertical)
         .constraints(
             [
-                Constraint::Percentage(10u16),
-                Constraint::Percentage(20u16), // logo.
-                Constraint::Percentage(10u16),
-                Constraint::Percentage(50u16), // body.
-                Constraint::Percentage(10u16),
+                Constraint::Percentage(30u16), // logo.
+                Constraint::Percentage(70u16), // body.
             ]
             .as_ref(),
         )
-        .split(inline_center[1usize]);
+        .split(inline_center_layout[1usize]);
 
+    let logo = Paragraph::new(BANNER)
+        .block(Block::default().borders(Borders::NONE))
+        .alignment(Alignment::Center)
+        .wrap(Wrap { trim: false });
+    f.render_widget(logo, grid_center_layout[0usize]);
+
+    // Jump to tabs, help, settings...
     let items: Vec<ListItem> = app
-        .shortcuts
-        .items
+        .tabs
+        .titles
         .iter()
         .map(|item| {
-            ListItem::new(vec![Spans::from(item.to_string())])
+            let item: &str = match item {
+                app::TabMode::Home(_i, t)
+                | app::TabMode::Facts(_i, t)
+                | app::TabMode::Principles(_i, t)
+                | app::TabMode::Input(_i, t) => t,
+            };
+            ListItem::new(vec![Spans::from(item)])
                 .style(Style::default().fg(Color::White).bg(Color::Reset))
         })
         .collect();
     let items = List::new(items)
         .block(
             Block::default()
-                .title("Shortcuts")
+                .title("Jump to")
                 .border_style(Style::default().fg(Color::White))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded),
@@ -225,13 +246,12 @@ where
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("> ");
-    f.render_stateful_widget(items, grid_center[3usize], &mut app.shortcuts.state);
-
-    let paragraph = Paragraph::new(BANNER)
-        .block(Block::default())
-        .alignment(Alignment::Center)
-        .wrap(Wrap { trim: false });
-    f.render_widget(paragraph, grid_center[1usize]);
+    // f.render_widget(items, grid_center_layout[1usize]);
+    f.render_stateful_widget(
+        items,
+        grid_center_layout[1usize],
+        &mut app.shortcuts_tabs.state,
+    );
 }
 
 /// FACTS
@@ -263,6 +283,31 @@ where
         .border_style(Style::default());
     let paragraph = Paragraph::new(text).block(block).wrap(Wrap { trim: true });
     f.render_widget(paragraph, area);
+    /* let items: Vec<ListItem> = app
+        .shortcuts
+        .items
+        .iter()
+        .map(|item| {
+            ListItem::new(vec![Spans::from(item.to_string())])
+                .style(Style::default().fg(Color::White).bg(Color::Reset))
+        })
+        .collect();
+    let items = List::new(items)
+        .block(
+            Block::default()
+                .title("Shortcuts")
+                .border_style(Style::default().fg(Color::White))
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded),
+        )
+        .highlight_style(
+            Style::default()
+                .fg(Color::Cyan)
+                .bg(Color::Black)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol("> ");
+    f.render_stateful_widget(items, grid_center[3usize], &mut app.shortcuts.state); */
 }
 
 /// PRINCIPLES

@@ -1,7 +1,7 @@
 //! [`backend`] is `crossterm` backend.
 
 use crate::{
-    app::{App, InputMode},
+    app::{self, App, InputMode},
     db::DB,
     server, ui,
 };
@@ -94,7 +94,10 @@ where
                         }
                         KeyCode::Down => app.on_down(),
                         KeyCode::Esc => {
-                            app.shortcuts.unselect();
+                            app.shortcuts_help.unselect();
+                        }
+                        KeyCode::Enter => {
+                            app.jump_to_tab();
                         }
                         _ => {}
                     },
