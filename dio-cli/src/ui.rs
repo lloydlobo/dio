@@ -5,6 +5,7 @@ use std::{
     borrow::Cow,
     collections::HashMap,
     fmt::{Binary, Debug, LowerHex, Octal, UpperHex},
+    string::String,
 };
 use tui::{
     self,
@@ -132,7 +133,7 @@ where
     B: Backend,
 {
     let items: Vec<ListItem> = app
-        .shortcuts_help
+        .list_help
         .items
         .iter()
         .map(|item| {
@@ -159,7 +160,7 @@ where
     if app.show_help_popup {
         let area: Rect = centered_rect(60u16, 20u16, area); // `60, 20, size`.
         f.render_widget(Clear, area); // `Clear` - A widget to clear/reset a certain area to allow overdrawing (e.g. for popups).
-        f.render_stateful_widget(items, area, &mut app.shortcuts_help.state);
+        f.render_stateful_widget(items, area, &mut app.list_help.state);
     }
 }
 
@@ -247,11 +248,7 @@ where
         )
         .highlight_symbol("> ");
     // f.render_widget(items, grid_center_layout[1usize]);
-    f.render_stateful_widget(
-        items,
-        grid_center_layout[1usize],
-        &mut app.shortcuts_tabs.state,
-    );
+    f.render_stateful_widget(items, grid_center_layout[1usize], &mut app.list_tabs.state);
 }
 
 /// FACTS
@@ -259,55 +256,35 @@ fn draw_tab_1_facts<B>(f: &mut tui::Frame<B>, app: &mut App, area: Rect)
 where
     B: Backend,
 {
-    let facts: HashMap<String, String> = app.facts.clone();
-    let len = facts.len();
-    let mut text = Vec::<Spans>::with_capacity(len);
-    (1..=len).for_each(|id: usize| {
-        let fact: String = facts
-            .get(&id.to_string())
-            .expect("Failed to get fact from facts map. This should never happen.")
-            .to_owned();
-        let fact: &str = fact.split_terminator('.').collect::<Vec<_>>()[0];
-        text.push(Spans::from(format!("{id:0>2}. {fact}.")));
-        // text.push(Spans::from(Span::raw("")));
-    });
-    let block = Block::default()
-        .title(Span::styled(
-            "Facts",
-            Style::default()
-                .fg(Color::Green)
-                .add_modifier(Modifier::BOLD),
-        ))
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .border_style(Style::default());
-    let paragraph = Paragraph::new(text).block(block).wrap(Wrap { trim: true });
-    f.render_widget(paragraph, area);
-    /* let items: Vec<ListItem> = app
-        .shortcuts
+    // TODO: Wrap
+    // let paragraph = Paragraph::new(text).block(block).wrap(Wrap { trim: true });
+    let list: Vec<ListItem> = app
+        .list_facts
         .items
         .iter()
-        .map(|item| {
-            ListItem::new(vec![Spans::from(item.to_string())])
+        .enumerate() // Gives current iteration count & next value.
+        .map(|(i, item)| {
+            let item: String = split_title_prefix_id(item, i + 1usize);
+            ListItem::new(vec![Spans::from(item)])
                 .style(Style::default().fg(Color::White).bg(Color::Reset))
         })
         .collect();
-    let items = List::new(items)
+    let items = List::new(list)
         .block(
             Block::default()
-                .title("Shortcuts")
+                .title("Facts")
                 .border_style(Style::default().fg(Color::White))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded),
         )
         .highlight_style(
             Style::default()
-                .fg(Color::Cyan)
-                .bg(Color::Black)
+                .fg(Color::White)
+                .bg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("> ");
-    f.render_stateful_widget(items, grid_center[3usize], &mut app.shortcuts.state); */
+    f.render_stateful_widget(items, area, &mut app.list_facts.state)
 }
 
 /// PRINCIPLES
@@ -315,31 +292,33 @@ fn draw_tab_2_principles<B>(f: &mut tui::Frame<B>, app: &mut App, area: Rect)
 where
     B: Backend,
 {
-    let principles: HashMap<String, String> = app.principles.clone();
-    let len = principles.len();
-    let mut text = Vec::<Spans>::with_capacity(len);
-    (1..=len).for_each(|id: usize| {
-        let principle: String = principles
-            .get(&id.to_string())
-            .expect("Failed to get principle from principles map. This should never happen.")
-            .to_owned();
-        let principle: &str = principle.split_terminator('.').collect::<Vec<_>>()[0];
-        // [See for formatting digits](https://doc.rust-lang.org/std/fmt/index.html#syntax)
-        text.push(Spans::from(format!("{id:0>2}. {principle}.",)));
-    });
-    let block = Block::default()
-        .title(Span::styled(
-            "Principles",
+    let list: Vec<ListItem> = app
+        .list_principles
+        .items
+        .iter()
+        .enumerate() // Gives current iteration count & next value.
+        .map(|(i, item)| {
+            let item: String = split_title_prefix_id(item, i + 1usize);
+            ListItem::new(vec![Spans::from(item)])
+                .style(Style::default().fg(Color::White).bg(Color::Reset))
+        })
+        .collect();
+    let items = List::new(list)
+        .block(
+            Block::default()
+                .title("Principles")
+                .border_style(Style::default().fg(Color::White))
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded),
+        )
+        .highlight_style(
             Style::default()
-                .fg(Color::Green)
+                .fg(Color::White)
+                .bg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
-        ))
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .border_style(Style::default());
-    let paragraph = Paragraph::new(text).block(block).wrap(Wrap { trim: true });
-
-    f.render_widget(paragraph, area);
+        )
+        .highlight_symbol("> ");
+    f.render_stateful_widget(items, area, &mut app.list_principles.state)
 }
 
 /// USER INPUTS
@@ -539,6 +518,12 @@ where
     } else {
         m_2
     }
+}
+
+/// [See for formatting digits](https://doc.rust-lang.org/std/fmt/index.html#syntax)
+fn split_title_prefix_id(string: &str, id: usize) -> String {
+    let split = string.split_terminator('.').collect::<Vec<_>>()[0];
+    format!("{id:0>2}. {split}.")
 }
 
 // ----------------------------------------------------------------------------

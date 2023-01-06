@@ -48,10 +48,14 @@ pub struct App<'a> {
     pub facts: HashMap<String, String>,
     /// List from database.
     pub principles: HashMap<String, String>,
+    /// List of facts.
+    pub list_facts: StatefulList<&'a str>,
+    /// List of principles.
+    pub list_principles: StatefulList<&'a str>,
+    /// List of keys associated to tabs.
+    pub list_tabs: StatefulList<&'a str>,
     /// List of keys associated to action.
-    pub shortcuts_help: StatefulList<&'a str>,
-    /// List of keys associated to action.
-    pub shortcuts_tabs: StatefulList<&'a str>,
+    pub list_help: StatefulList<&'a str>,
     /// Current value of the input box.
     pub input: String,
     /// Current input mode.
@@ -62,12 +66,19 @@ pub struct App<'a> {
     pub enhanced_graphics: bool,
 }
 
+fn get_map_val(hash: &HashMap<String, String>) -> Vec<&str> {
+    hash.iter()
+        .map(|f| f.1.as_str())
+        .collect::<Vec<_>>()
+        .to_vec()
+}
+
 /// Facts page, Principles page. Each have lists of condensed titles.
 /// When one selects a item, it expands. or opens a dialog buffer.
 
 impl<'a> App<'a> {
-    pub fn new(title: &'a str, db: DB, enhanced_graphics: bool) -> Self {
-        let list_tabs: Vec<&str> = TAB_TITLES
+    pub fn new(title: &'a str, db: &'a DB, enhanced_graphics: bool) -> Self {
+        let l_tabs: Vec<&str> = TAB_TITLES
             .iter()
             .map(|tab| match tab {
                 TabMode::Home(_, t)
@@ -76,16 +87,19 @@ impl<'a> App<'a> {
                 | TabMode::Input(_, t) => *t,
             })
             .collect();
+
         Self {
             title,
             should_quit: false,
             tabs: TabsState::new(TAB_TITLES.to_vec()),
             show_help_popup: false,
             progress: 0f64,
-            facts: db.facts,
-            principles: db.principles,
-            shortcuts_help: StatefulList::with_items(LIST_SHORTCUTS.to_vec()),
-            shortcuts_tabs: StatefulList::with_items(list_tabs),
+            facts: db.facts.to_owned(),
+            principles: db.principles.to_owned(),
+            list_facts: StatefulList::with_items(get_map_val(&db.facts)),
+            list_principles: StatefulList::with_items(get_map_val(&db.principles)),
+            list_tabs: StatefulList::with_items(l_tabs),
+            list_help: StatefulList::with_items(LIST_SHORTCUTS.to_vec()),
             input: String::new(),
             input_mode: InputMode::Normal,
             messages: Vec::<String>::new(),
@@ -118,28 +132,26 @@ impl<'a> App<'a> {
         self.tabs.next();
     }
 
-    // TODO: Either remove ListState from popup help items,
-    // or add a mode so that if popup is active then keys are directed towards there.
     pub fn on_up(&mut self) {
         if self.show_help_popup {
-            self.shortcuts_help.previous();
+            self.list_help.previous();
         } else {
             match self.current_tab_mode() {
-                TabMode::Home(_, _) => self.shortcuts_tabs.previous(),
-                TabMode::Principles(_, _) => {}
-                TabMode::Facts(_, _) => {}
+                TabMode::Home(_, _) => self.list_tabs.previous(),
+                TabMode::Facts(_, _) => self.list_facts.previous(),
+                TabMode::Principles(_, _) => self.list_principles.previous(),
                 TabMode::Input(_, _) => {}
             };
         }
     }
     pub fn on_down(&mut self) {
         if self.show_help_popup {
-            self.shortcuts_help.next();
+            self.list_help.next();
         } else {
             match self.current_tab_mode() {
-                TabMode::Home(_, _) => self.shortcuts_tabs.next(),
-                TabMode::Principles(_, _) => {}
-                TabMode::Facts(_, _) => {}
+                TabMode::Home(_, _) => self.list_tabs.next(),
+                TabMode::Facts(_, _) => self.list_facts.next(),
+                TabMode::Principles(_, _) => self.list_principles.next(),
                 TabMode::Input(_, _) => {}
             };
         }
@@ -154,7 +166,7 @@ impl<'a> App<'a> {
     /// Go to the tab index of associated tab titles in a list when selected.
     /// Using it with `KeyCode::Enter` in `InputMode::Normal`.
     pub fn jump_to_tab(&mut self) {
-        if let Some(index) = self.shortcuts_tabs.state.selected() {
+        if let Some(index) = self.list_tabs.state.selected() {
             self.tabs.index = index
         }
     }

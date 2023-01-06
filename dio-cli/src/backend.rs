@@ -35,7 +35,7 @@ pub async fn run(tick_rate: Duration, enhanced_graphics: bool) -> anyhow::Result
     let (facts, principles) = server::get_server_data().await?;
     let db = DB { facts, principles };
 
-    let app = App::new("Dio App", db, enhanced_graphics);
+    let app = App::new("Dio App", &db, enhanced_graphics);
 
     // Run the app.
     run_app(&mut terminal, app, tick_rate).await?;
@@ -94,7 +94,7 @@ where
                         }
                         KeyCode::Down => app.on_down(),
                         KeyCode::Esc => {
-                            app.shortcuts_help.unselect();
+                            app.list_help.unselect();
                         }
                         KeyCode::Enter => {
                             app.jump_to_tab();
