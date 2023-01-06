@@ -58,6 +58,8 @@ pub struct App<'a> {
     pub list_help: StatefulList<&'a str>,
     /// Current value of the input box.
     pub input: String,
+    /// Previews list items when hovered, or selected.
+    pub preview_list: String,
     /// Current input mode.
     pub input_mode: InputMode,
     /// History of recorded messages.
@@ -103,6 +105,7 @@ impl<'a> App<'a> {
             input: String::new(),
             input_mode: InputMode::Normal,
             messages: Vec::<String>::new(),
+            preview_list: String::new(),
             enhanced_graphics,
         }
     }
@@ -137,9 +140,21 @@ impl<'a> App<'a> {
             self.list_help.previous();
         } else {
             match self.current_tab_mode() {
-                TabMode::Home(_, _) => self.list_tabs.previous(),
-                TabMode::Facts(_, _) => self.list_facts.previous(),
-                TabMode::Principles(_, _) => self.list_principles.previous(),
+                TabMode::Home(_, _) => {
+                    self.list_tabs.previous();
+                }
+                TabMode::Facts(_, _) => {
+                    self.list_facts.previous();
+                    if let Some(idx) = self.list_facts.state.selected() {
+                        self.preview_list = self.list_facts.items[idx].to_string();
+                    }
+                }
+                TabMode::Principles(_, _) => {
+                    self.list_principles.previous();
+                    if let Some(idx) = self.list_principles.state.selected() {
+                        self.preview_list = self.list_principles.items[idx].to_string();
+                    }
+                }
                 TabMode::Input(_, _) => {}
             };
         }
@@ -149,9 +164,21 @@ impl<'a> App<'a> {
             self.list_help.next();
         } else {
             match self.current_tab_mode() {
-                TabMode::Home(_, _) => self.list_tabs.next(),
-                TabMode::Facts(_, _) => self.list_facts.next(),
-                TabMode::Principles(_, _) => self.list_principles.next(),
+                TabMode::Home(_, _) => {
+                    self.list_tabs.next();
+                }
+                TabMode::Facts(_, _) => {
+                    self.list_facts.next();
+                    if let Some(idx) = self.list_facts.state.selected() {
+                        self.preview_list = self.list_facts.items[idx].to_string();
+                    }
+                }
+                TabMode::Principles(_, _) => {
+                    self.list_principles.next();
+                    if let Some(idx) = self.list_principles.state.selected() {
+                        self.preview_list = self.list_principles.items[idx].to_string();
+                    }
+                }
                 TabMode::Input(_, _) => {}
             };
         }

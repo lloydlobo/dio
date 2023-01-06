@@ -82,8 +82,21 @@ where
         _ => {}
     }
 
-    // Temporary rendering gauge. Add hover selected preview here. line in input messages.
-    f.render_widget(tabs, chunks[index_from(Chunk::Preview)]);
+    // Add hover selected preview here like `ranger`. line in input messages.
+    let preview = Paragraph::new(app.preview_list.to_string()) // .scroll((0, 0))
+        .block(
+            Block::default()
+                .title(Span::styled(
+                    "Preview",
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ))
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded),
+        )
+        .wrap(Wrap { trim: true });
+    f.render_widget(preview, chunks[index_from(Chunk::Preview)]);
 
     // Track tick rate progress of the app. Resets again after a while.
     let gauge = Gauge::default()
