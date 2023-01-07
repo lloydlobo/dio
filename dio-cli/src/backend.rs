@@ -1,7 +1,7 @@
 //! [`backend`] is `crossterm` backend.
 
 use crate::{
-    app::{self, App, InputMode, ListName},
+    app::{App, InputMode, ListName},
     db::DB,
     server, ui,
 };

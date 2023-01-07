@@ -14,7 +14,7 @@ use tui::{
     text::{Span, Spans, Text},
     widgets::{Block, BorderType, Borders, Clear, Gauge, List, ListItem, Paragraph, Tabs, Wrap},
 };
-use unicode_width::UnicodeWidthStr; // Determine displayed width of char and str types according to Unicode Standard Annex #11 rules.
+// use unicode_width::UnicodeWidthStr; // Determine displayed width of char and str types according to Unicode Standard Annex #11 rules.
 
 // ----------------------------------------------------------------------------
 
@@ -28,20 +28,32 @@ pub fn draw<B>(f: &mut tui::Frame<B>, app: &mut App)
 where
     B: Backend,
 {
+    let constraints = [
+        Constraint::Length(3), // Tabs.
+        Constraint::Min(0),    // Body.
+        Constraint::Length(8), // Preview.
+        Constraint::Length(3), // Tick rate progress.
+    ];
     // Two chunks [0->Len 3, 1->Min 0]. 0 for tab, 1 for body.
-    let chunks = Layout::default()
+    let chunks: Vec<Rect> = Layout::default()
         .margin(0u16)
-        .constraints(
-            [
-                Constraint::Length(3), // Tabs.
-                Constraint::Min(0),    // Body.
-                Constraint::Length(8), // Preview.
-                Constraint::Length(3), // Tick rate progress.
-            ]
-            .as_ref(),
-        )
+        .constraints(constraints.as_ref())
         .split(f.size());
 
+    // Add hover selected preview here like `ranger`. line in input messages.
+    let preview = Paragraph::new(app.preview_item.to_string()) // .scroll((0, 0))
+        .block(
+            Block::default()
+                .title(Span::styled(
+                    "Preview",
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ))
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded),
+        )
+        .wrap(Wrap { trim: true });
     {
         // Set the tabs of the app menu navigation.
         let tabs: Vec<Spans> = app
@@ -111,31 +123,36 @@ where
         f.render_widget(help_info_widget, chunk_tabs[1usize]);
     }
     {
+        let rect_home = Layout::default()
+            .constraints(
+                vec![
+                    constraints[index_from(Chunk::Tabs)],
+                    constraints[index_from(Chunk::Body)],
+                    // constraints[index_from(Chunk::Preview)],
+                    constraints[index_from(Chunk::Gauge)],
+                ]
+                .as_ref(),
+            )
+            .split(f.size());
         // Draw the selected tab (page) and navigate to it.
         match app.tabs.index {
-            0 => draw_tab_0_home(f, app, chunks[(index_from(Chunk::Body))]),
-            1 => draw_tab_1_facts(f, app, chunks[(index_from(Chunk::Body))]),
-            2 => draw_tab_2_principles(f, app, chunks[(index_from(Chunk::Body))]),
+            0 => {
+                draw_tab_0_home(f, app, rect_home[index_from(Chunk::Body)]);
+            }
+            1 => {
+                draw_tab_1_facts(f, app, chunks[(index_from(Chunk::Body))]);
+                f.render_widget(preview, chunks[index_from(Chunk::Preview)]);
+            }
+            2 => {
+                draw_tab_2_principles(f, app, chunks[(index_from(Chunk::Body))]);
+                f.render_widget(preview, chunks[index_from(Chunk::Preview)]);
+            }
             // 3 => draw_tab_3_inputs(f, app, chunks[(index_from(Chunk::Body))]),
             _ => {}
         }
     }
     {
-        // Add hover selected preview here like `ranger`. line in input messages.
-        let preview = Paragraph::new(app.preview_item.to_string()) // .scroll((0, 0))
-            .block(
-                Block::default()
-                    .title(Span::styled(
-                        "Preview",
-                        Style::default()
-                            .fg(Color::Yellow)
-                            .add_modifier(Modifier::BOLD),
-                    ))
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded),
-            )
-            .wrap(Wrap { trim: true });
-        f.render_widget(preview, chunks[index_from(Chunk::Preview)]);
+        // f.render_widget(preview, chunks[index_from(Chunk::Preview)]);
     }
 
     {
@@ -256,7 +273,7 @@ where
         .split(area);
     let grid_center_layout = Layout::default()
         .horizontal_margin(5u16)
-        .vertical_margin(2u16)
+        .vertical_margin(4u16)
         .direction(Direction::Vertical)
         .constraints(
             [
@@ -418,7 +435,7 @@ where
 ///   messages
 ///
 /// [Reference](https://github.com/fdehau/tui-rs/blob/master/examples/user_input.rs)
-fn draw_tab_3_inputs<B>(f: &mut tui::Frame<B>, app: &mut App, area: Rect)
+/* fn draw_tab_3_inputs<B>(f: &mut tui::Frame<B>, app: &mut App, area: Rect)
 where
     B: Backend,
 {
@@ -502,8 +519,7 @@ where
             .border_type(BorderType::Rounded),
     );
     f.render_widget(messages, chunks[2usize]);
-}
-
+} */
 // ----------------------------------------------------------------------------
 
 /// Enum for getting the position of a widget in a layout to draw in.
