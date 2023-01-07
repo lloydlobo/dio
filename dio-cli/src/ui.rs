@@ -83,7 +83,12 @@ where
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
-                    .title("Dio"),
+                    .title(Span::styled(
+                        "DIO",
+                        Style::default()
+                            .fg(Color::LightCyan)
+                            .add_modifier(Modifier::BOLD),
+                    )),
             )
             .highlight_style(
                 Style::default()
@@ -91,30 +96,29 @@ where
                     .add_modifier(Modifier::BOLD),
             )
             .select(app.tabs.index);
-        f.render_widget(tabs.clone(), chunks[index_from(Chunk::Tabs)]);
+        f.render_widget(tabs, chunks[index_from(Chunk::Tabs)]);
     }
 
     {
         let chunk_tabs: Vec<Rect> = Layout::default()
-            .constraints(
-                vec![Constraint::Percentage(80u16), Constraint::Percentage(20u16)].as_ref(),
-            )
+            .constraints(vec![Constraint::Ratio(2, 3), Constraint::Ratio(1, 3)].as_ref())
             .direction(Direction::Horizontal)
-            .split(chunks[0usize]);
-        let style = if app.show_help_popup {
+            .split(chunks[index_from(Chunk::Tabs)]);
+        let style_help = if app.show_help_popup {
             Style::default()
                 .fg(Color::LightBlue)
                 .add_modifier(Modifier::BOLD)
         } else {
             Style::default().add_modifier(Modifier::BOLD)
         };
-
         let help_info_widget = Paragraph::new(Spans::from(vec![
-            Span::from("Toggle Help"),
+            Span::from("Help -"),
             Span::raw(" "),
-            Span::raw("-"),
+            Span::styled("?", style_help),
+            Span::raw(" | "),
+            Span::from("Quit -"),
             Span::raw(" "),
-            Span::styled("?", style),
+            Span::from("q"),
         ]))
         .block(Block::default().title(Span::styled(
             &app.time_local,
@@ -150,9 +154,6 @@ where
             // 3 => draw_tab_3_inputs(f, app, chunks[(index_from(Chunk::Body))]),
             _ => {}
         }
-    }
-    {
-        // f.render_widget(preview, chunks[index_from(Chunk::Preview)]);
     }
 
     {
