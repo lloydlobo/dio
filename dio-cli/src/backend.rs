@@ -107,6 +107,7 @@ where
                                 }
                             }
                         }
+                        // FIXME: Unselect the jump 'Go to' tabs in `Home` after use. This remains active when on any tab.
                         KeyCode::Enter => {
                             app.jump_to_tab();
                         }

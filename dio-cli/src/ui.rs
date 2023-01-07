@@ -9,7 +9,7 @@ use std::{
 use tui::{
     self,
     backend::Backend,
-    layout::{Alignment, Constraint, Corner, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
     widgets::{Block, BorderType, Borders, Clear, Gauge, List, ListItem, Paragraph, Tabs, Wrap},
@@ -85,7 +85,7 @@ where
     {
         let chunk_tabs: Vec<Rect> = Layout::default()
             .constraints(
-                vec![Constraint::Percentage(90u16), Constraint::Percentage(10u16)].as_ref(),
+                vec![Constraint::Percentage(80u16), Constraint::Percentage(20u16)].as_ref(),
             )
             .direction(Direction::Horizontal)
             .split(chunks[0usize]);
@@ -96,6 +96,7 @@ where
         } else {
             Style::default().add_modifier(Modifier::BOLD)
         };
+
         let help_info_widget = Paragraph::new(Spans::from(vec![
             Span::from("Help"),
             Span::raw(" "),
@@ -103,7 +104,10 @@ where
             Span::raw(" "),
             Span::styled("?", style),
         ]))
-        .block(Block::default().title(Span::styled("", Style::default().fg(Color::White))));
+        .block(Block::default().title(Span::styled(
+            &app.time_local,
+            Style::default().fg(Color::White),
+        )));
         f.render_widget(help_info_widget, chunk_tabs[1usize]);
     }
     {

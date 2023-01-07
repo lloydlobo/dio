@@ -43,8 +43,12 @@ pub struct App<'a> {
     pub tabs: TabsState<TabMode<'a>>,
     /// '?' activates the help popup modal.
     pub show_help_popup: bool,
+    /// Cache previous selected list before popup overlay.
+    pub cache_list_prior_popup: ListName,
     /// The `tick_rate' of the application.
     pub progress: f64,
+    /// Current local time.
+    pub time_local: String,
     /// List from database.
     pub facts: HashMap<String, String>,
     /// List from database.
@@ -71,8 +75,6 @@ pub struct App<'a> {
     pub messages: Vec<String>,
     /// Enhanced TUI graphics. More CPU usage.
     pub enhanced_graphics: bool,
-    /// Cache previous selected list before popup overlay.
-    pub cache_list_prior_popup: ListName,
 }
 
 fn get_map_val(hash: &HashMap<String, String>) -> Vec<&str> {
@@ -101,6 +103,7 @@ impl<'a> App<'a> {
             tabs: TabsState::new(TAB_TITLES.to_vec()),
             show_help_popup: false,
             progress: 0f64,
+            time_local: String::new(),
             facts: db.facts.to_owned(),
             principles: db.principles.to_owned(),
             list_facts: StatefulList::with_items(get_map_val(&db.facts), ListName::Facts),
@@ -124,6 +127,7 @@ impl<'a> App<'a> {
         if self.progress > 1f64 {
             self.progress = 0f64; // Reset.
         }
+        self.time_local = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     }
 
     pub fn on_key(&mut self, c: char) {
