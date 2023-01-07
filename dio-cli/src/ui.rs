@@ -9,7 +9,7 @@ use std::{
 use tui::{
     self,
     backend::Backend,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Corner, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
     widgets::{Block, BorderType, Borders, Clear, Gauge, List, ListItem, Paragraph, Tabs, Wrap},
@@ -42,100 +42,132 @@ where
         )
         .split(f.size());
 
-    // Set the tabs of the app menu navigation.
-    let titles = app
-        .tabs
-        .titles
-        .iter()
-        .filter_map(|tab| match tab {
-            app::TabMode::Home(_, t) => Some(Cow::from(*t)),
-            app::TabMode::Facts(_, t) => Some(Cow::from(*t)),
-            app::TabMode::Principles(_, t) => Some(Cow::from(*t)),
-            app::TabMode::Input(_, _t) => None,
-            app::TabMode::PopupHelp(_, _t) => None,
-        })
-        .map(|t| {
-            Spans::from(Span::styled(
-                if t.len() > 1 {
-                    t.to_string()
-                } else {
-                    String::new()
-                },
-                Style::default().fg(Color::Cyan),
-            ))
-        })
-        .collect::<Vec<_>>();
-    let tabs = Tabs::new(titles)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title("Dio"),
-        )
-        .highlight_style(
-            Style::default()
-                .fg(Color::Green)
-                .add_modifier(Modifier::BOLD),
-        )
-        .select(app.tabs.index);
-    f.render_widget(tabs.clone(), chunks[index_from(Chunk::Tabs)]);
-
-    // Draw the selected tab (page) and navigate to it.
-    match app.tabs.index {
-        0 => draw_tab_0_home(f, app, chunks[(index_from(Chunk::Body))]),
-        1 => draw_tab_1_facts(f, app, chunks[(index_from(Chunk::Body))]),
-        2 => draw_tab_2_principles(f, app, chunks[(index_from(Chunk::Body))]),
-        // 3 => draw_tab_3_inputs(f, app, chunks[(index_from(Chunk::Body))]),
-        _ => {}
+    {
+        // Set the tabs of the app menu navigation.
+        let tabs: Vec<Spans> = app
+            .tabs
+            .titles
+            .iter()
+            .filter_map(|tab| match tab {
+                app::TabMode::Home(_, t) => Some(Cow::from(*t)),
+                app::TabMode::Facts(_, t) => Some(Cow::from(*t)),
+                app::TabMode::Principles(_, t) => Some(Cow::from(*t)),
+                app::TabMode::Input(_, _t) => None,
+                app::TabMode::PopupHelp(_, _t) => None,
+            })
+            .map(|t| {
+                Spans::from(Span::styled(
+                    if t.len() > 1 {
+                        t.to_string()
+                    } else {
+                        String::new()
+                    },
+                    Style::default().fg(Color::Cyan),
+                ))
+            })
+            .collect();
+        let tabs = Tabs::new(tabs)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title("Dio"),
+            )
+            .highlight_style(
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            )
+            .select(app.tabs.index);
+        f.render_widget(tabs.clone(), chunks[index_from(Chunk::Tabs)]);
     }
 
-    // Add hover selected preview here like `ranger`. line in input messages.
-    let preview = Paragraph::new(app.preview_item.to_string()) // .scroll((0, 0))
-        .block(
-            Block::default()
-                .title(Span::styled(
-                    "Preview",
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD),
-                ))
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded),
-        )
-        .wrap(Wrap { trim: true });
-    f.render_widget(preview, chunks[index_from(Chunk::Preview)]);
-
-    // Track tick rate progress of the app. Resets again after a while.
-    let gauge = Gauge::default()
-        .block(
-            Block::default()
-                .title(Span::styled(
-                    "Tick rate",
-                    Style::default().add_modifier(Modifier::ITALIC),
-                ))
-                .style(Style::default().add_modifier(modifier(
-                    app.progress,
-                    Modifier::ITALIC,
-                    Modifier::BOLD,
-                )))
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded),
-        )
-        .gauge_style(
+    {
+        let chunk_tabs: Vec<Rect> = Layout::default()
+            .constraints(
+                vec![Constraint::Percentage(90u16), Constraint::Percentage(10u16)].as_ref(),
+            )
+            .direction(Direction::Horizontal)
+            .split(chunks[0usize]);
+        let style = if app.show_help_popup {
             Style::default()
-                .fg(Color::LightGreen)
-                .bg(Color::Reset)
-                .add_modifier(modifier(app.progress, Modifier::BOLD, Modifier::ITALIC)),
-        )
-        .ratio(app.progress) // .percent(app.progress) // for u16.
-        .use_unicode(true);
-    f.render_widget(gauge, chunks[index_from(Chunk::Gauge)]);
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().add_modifier(Modifier::BOLD)
+        };
+        let help_info_widget = Paragraph::new(Spans::from(vec![
+            Span::from("Help"),
+            Span::raw(" "),
+            Span::raw("-"),
+            Span::raw(" "),
+            Span::styled("?", style),
+        ]))
+        .block(Block::default().title(Span::styled("", Style::default().fg(Color::White))));
+        f.render_widget(help_info_widget, chunk_tabs[1usize]);
+    }
+    {
+        // Draw the selected tab (page) and navigate to it.
+        match app.tabs.index {
+            0 => draw_tab_0_home(f, app, chunks[(index_from(Chunk::Body))]),
+            1 => draw_tab_1_facts(f, app, chunks[(index_from(Chunk::Body))]),
+            2 => draw_tab_2_principles(f, app, chunks[(index_from(Chunk::Body))]),
+            // 3 => draw_tab_3_inputs(f, app, chunks[(index_from(Chunk::Body))]),
+            _ => {}
+        }
+    }
+    {
+        // Add hover selected preview here like `ranger`. line in input messages.
+        let preview = Paragraph::new(app.preview_item.to_string()) // .scroll((0, 0))
+            .block(
+                Block::default()
+                    .title(Span::styled(
+                        "Preview",
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
+                    ))
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded),
+            )
+            .wrap(Wrap { trim: true });
+        f.render_widget(preview, chunks[index_from(Chunk::Preview)]);
+    }
 
-    // Help Popup uses the full layout and draws over everything.
-    let rect = Layout::default()
-        .constraints([Constraint::Min(0)].as_ref())
-        .split(f.size());
-    draw_help_popup(f, app, rect[0]);
+    {
+        // Track tick rate progress of the app. Resets again after a while.
+        let gauge = Gauge::default()
+            .block(
+                Block::default()
+                    .title(Span::styled(
+                        "Tick rate",
+                        Style::default().add_modifier(Modifier::ITALIC),
+                    ))
+                    .style(Style::default().add_modifier(modifier(
+                        app.progress,
+                        Modifier::ITALIC,
+                        Modifier::BOLD,
+                    )))
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded),
+            )
+            .gauge_style(
+                Style::default()
+                    .fg(Color::LightGreen)
+                    .bg(Color::Reset)
+                    .add_modifier(modifier(app.progress, Modifier::BOLD, Modifier::ITALIC)),
+            )
+            .ratio(app.progress) // .percent(app.progress) // for u16.
+            .use_unicode(true);
+        f.render_widget(gauge, chunks[index_from(Chunk::Gauge)]);
+    }
+    {
+        // Help Popup uses the full layout and draws over everything.
+        let rect = Layout::default()
+            .constraints([Constraint::Min(0)].as_ref())
+            .split(f.size());
+        draw_help_popup(f, app, rect[0]);
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -219,61 +251,77 @@ where
         )
         .split(area);
     let grid_center_layout = Layout::default()
+        .horizontal_margin(5u16)
         .vertical_margin(2u16)
         .direction(Direction::Vertical)
         .constraints(
             [
-                Constraint::Percentage(30u16), // logo.
-                Constraint::Percentage(70u16), // body.
+                Constraint::Percentage(55u16), // logo.
+                Constraint::Percentage(45u16), // body.
             ]
             .as_ref(),
         )
         .split(inline_center_layout[1usize]);
 
-    let logo = Paragraph::new(BANNER)
-        .block(Block::default().borders(Borders::NONE))
-        .alignment(Alignment::Center)
-        .wrap(Wrap { trim: false });
-    f.render_widget(logo, grid_center_layout[0usize]);
+    {
+        let logo = Paragraph::new(BANNER)
+            .block(Block::default().borders(Borders::NONE))
+            .alignment(Alignment::Center)
+            .wrap(Wrap { trim: false });
+        f.render_widget(logo, grid_center_layout[0usize]);
+    }
 
-    // Jump to tabs, help, settings...
-    let items: Vec<ListItem> = app
-        .tabs
-        .titles
-        .iter()
-        // .filter(|item| match item {
-        //     app::TabMode::PopupHelp(_, _) => false,
-        //     _ => true,
-        // })
-        .map(|item| {
-            let item: &str = match item {
-                app::TabMode::Home(_i, t)
-                | app::TabMode::Facts(_i, t)
-                | app::TabMode::Principles(_i, t)
-                | app::TabMode::Input(_i, t) => t,
-                app::TabMode::PopupHelp(_, t) => t,
-            };
-            ListItem::new(vec![Spans::from(item)])
-                .style(Style::default().fg(Color::White).bg(Color::Reset))
-        })
-        .collect();
-    let items = List::new(items)
-        .block(
-            Block::default()
-                .title("Jump to")
-                .border_style(Style::default().fg(Color::White))
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded),
-        )
-        .highlight_style(
-            Style::default()
-                .fg(Color::Cyan)
-                .bg(Color::Black)
-                .add_modifier(Modifier::BOLD),
-        )
-        .highlight_symbol("> ");
-    // f.render_widget(items, grid_center_layout[1usize]);
-    f.render_stateful_widget(items, grid_center_layout[1usize], &mut app.list_tabs.state);
+    {
+        let chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(
+                [
+                    Constraint::Percentage(25u16),
+                    Constraint::Percentage(50u16),
+                    Constraint::Percentage(25u16),
+                ]
+                .as_ref(),
+            )
+            .split(grid_center_layout[1usize]);
+
+        // Jump to tabs, help, settings...
+        let items: Vec<ListItem> = app
+            .tabs
+            .titles
+            .iter()
+            .map(|item| {
+                let item: &str = match item {
+                    app::TabMode::Home(_i, t)
+                    | app::TabMode::Facts(_i, t)
+                    | app::TabMode::Principles(_i, t)
+                    | app::TabMode::Input(_i, t) => t,
+                    app::TabMode::PopupHelp(_, t) => t,
+                };
+                ListItem::new(vec![Spans::from(item)]).style(Style::default().fg(Color::White))
+                // .bg(Color::Reset))
+            })
+            .collect();
+        let items = List::new(items)
+            .block(
+                Block::default()
+                    .title(Span::styled(
+                        "Go to",
+                        Style::default()
+                            .add_modifier(Modifier::BOLD)
+                            .fg(Color::Cyan),
+                    ))
+                    .title_alignment(Alignment::Center)
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded),
+            )
+            .highlight_style(
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )
+            .highlight_symbol("> ");
+        f.render_stateful_widget(items, chunks[1usize], &mut app.list_tabs.state);
+    }
 }
 
 /// FACTS
