@@ -345,7 +345,12 @@ where
     let items = List::new(list)
         .block(
             Block::default()
-                .title("Facts")
+                .title(Span::styled(
+                    "Facts",
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
+                ))
                 .border_style(Style::default().fg(Color::White))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded),
@@ -379,7 +384,12 @@ where
     let items = List::new(list)
         .block(
             Block::default()
-                .title("Principles")
+                .title(Span::styled(
+                    "Principles",
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
+                ))
                 .border_style(Style::default().fg(Color::White))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded),
