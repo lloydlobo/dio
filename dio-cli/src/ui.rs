@@ -11,7 +11,7 @@ use tui::{
     backend::Backend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Spans, Text},
+    text::{Span, Spans},
     widgets::{Block, BorderType, Borders, Clear, Gauge, List, ListItem, Paragraph, Tabs, Wrap},
 };
 // use unicode_width::UnicodeWidthStr; // Determine displayed width of char and str types according to Unicode Standard Annex #11 rules.
@@ -74,7 +74,7 @@ where
                     } else {
                         String::new()
                     },
-                    Style::default().fg(Color::Cyan),
+                    Style::default().fg(Color::LightCyan),
                 ))
             })
             .collect();
@@ -87,7 +87,7 @@ where
             )
             .highlight_style(
                 Style::default()
-                    .fg(Color::Green)
+                    .fg(Color::LightBlue)
                     .add_modifier(Modifier::BOLD),
             )
             .select(app.tabs.index);
@@ -110,7 +110,7 @@ where
         };
 
         let help_info_widget = Paragraph::new(Spans::from(vec![
-            Span::from("Help"),
+            Span::from("Toggle Help"),
             Span::raw(" "),
             Span::raw("-"),
             Span::raw(" "),
@@ -174,7 +174,7 @@ where
             )
             .gauge_style(
                 Style::default()
-                    .fg(Color::LightGreen)
+                    .fg(Color::LightCyan)
                     .bg(Color::Reset)
                     .add_modifier(modifier(app.progress, Modifier::BOLD, Modifier::ITALIC)),
             )
@@ -224,7 +224,7 @@ where
         )
         .highlight_style(
             Style::default()
-                .fg(Color::Cyan)
+                .fg(Color::LightCyan)
                 .bg(Color::Black)
                 .add_modifier(Modifier::BOLD),
         )
@@ -251,7 +251,7 @@ where
             .title(Span::styled(
                 "Home",
                 Style::default()
-                    .fg(Color::Green)
+                    .fg(Color::LightBlue)
                     .add_modifier(Modifier::BOLD),
             ))
             .borders(Borders::ALL)
@@ -264,9 +264,9 @@ where
         .direction(Direction::Horizontal)
         .constraints(
             [
-                Constraint::Percentage(25u16),
-                Constraint::Percentage(50u16), // To be picked.
-                Constraint::Percentage(25u16),
+                Constraint::Percentage(15u16),
+                Constraint::Percentage(70u16), // To be picked.
+                Constraint::Percentage(15u16),
             ]
             .as_ref(),
         )
@@ -297,9 +297,9 @@ where
             .direction(Direction::Horizontal)
             .constraints(
                 [
-                    Constraint::Percentage(25u16),
-                    Constraint::Percentage(50u16),
-                    Constraint::Percentage(25u16),
+                    Constraint::Percentage(15u16),
+                    Constraint::Percentage(70u16),
+                    Constraint::Percentage(15u16),
                 ]
                 .as_ref(),
             )
@@ -329,7 +329,7 @@ where
                         "Go to",
                         Style::default()
                             .add_modifier(Modifier::BOLD)
-                            .fg(Color::Cyan),
+                            .fg(Color::LightCyan),
                     ))
                     .title_alignment(Alignment::Center)
                     .borders(Borders::ALL)
@@ -337,7 +337,7 @@ where
             )
             .highlight_style(
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(Color::LightCyan)
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("> ");
@@ -350,8 +350,19 @@ fn draw_tab_1_facts<B>(f: &mut tui::Frame<B>, app: &mut App, area: Rect)
 where
     B: Backend,
 {
-    // TODO: Wrap
-    // let paragraph = Paragraph::new(text).block(block).wrap(Wrap { trim: true });
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .margin(0u16)
+        .constraints([Constraint::Ratio(3, 3), Constraint::Ratio(0, 3)].as_ref())
+        .split(area); // Redundant splitting.
+                      // .split(Rect {
+                      //     x: 0,
+                      //     y: 0,
+                      //     width: 9,
+                      //     height: 2,
+                      // });
+                      // TODO: Wrap
+                      // let paragraph = Paragraph::new(text).block(block).wrap(Wrap { trim: true });
     let list: Vec<ListItem> = app
         .list_facts
         .items
@@ -369,7 +380,7 @@ where
                 .title(Span::styled(
                     "Facts",
                     Style::default()
-                        .fg(Color::Green)
+                        .fg(Color::LightBlue)
                         .add_modifier(Modifier::BOLD),
                 ))
                 .border_style(Style::default().fg(Color::White))
@@ -379,11 +390,11 @@ where
         .highlight_style(
             Style::default()
                 .fg(Color::White)
-                .bg(Color::Cyan)
+                .bg(Color::LightCyan)
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("> ");
-    f.render_stateful_widget(items, area, &mut app.list_facts.state)
+    f.render_stateful_widget(items, chunks[0usize], &mut app.list_facts.state)
 }
 
 /// PRINCIPLES
@@ -408,7 +419,7 @@ where
                 .title(Span::styled(
                     "Principles",
                     Style::default()
-                        .fg(Color::Green)
+                        .fg(Color::LightBlue)
                         .add_modifier(Modifier::BOLD),
                 ))
                 .border_style(Style::default().fg(Color::White))
@@ -418,7 +429,7 @@ where
         .highlight_style(
             Style::default()
                 .fg(Color::White)
-                .bg(Color::Cyan)
+                .bg(Color::LightCyan)
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("> ");
@@ -687,7 +698,7 @@ where
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default())
-        .style(Style::default().bg(Color::Blue));
+        .style(Style::default().bg(Color::LightBlue));
     f.render_widget(block, chunks[1usize]);
 
     if app.show_help_popup {
