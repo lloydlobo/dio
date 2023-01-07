@@ -72,6 +72,7 @@ pub struct App<'a> {
     pub messages: Vec<String>,
     /// Enhanced TUI graphics. More CPU usage.
     pub enhanced_graphics: bool,
+    /// Cache previous selected list before popup overlay.
     pub cache_list_prior_popup: ListName,
 }
 
@@ -236,7 +237,7 @@ impl<'a> App<'a> {
 
     /// If we are on current tab then get that tab and
     /// apply key press action relevant to that tab only.
-    fn current_tab_mode(&mut self) -> TabMode {
+    pub fn current_tab_mode(&mut self) -> TabMode {
         self.tabs.titles.to_vec()[self.tabs.index].to_owned()
     }
 
