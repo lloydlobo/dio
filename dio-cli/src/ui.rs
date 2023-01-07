@@ -47,7 +47,7 @@ where
                 .title(Span::styled(
                     "Preview",
                     Style::default()
-                        .fg(Color::Yellow)
+                        .fg(Color::LightCyan)
                         .add_modifier(Modifier::BOLD),
                 ))
                 .borders(Borders::ALL)
@@ -103,7 +103,7 @@ where
             .split(chunks[0usize]);
         let style = if app.show_help_popup {
             Style::default()
-                .fg(Color::Yellow)
+                .fg(Color::LightBlue)
                 .add_modifier(Modifier::BOLD)
         } else {
             Style::default().add_modifier(Modifier::BOLD)
@@ -217,15 +217,20 @@ where
     let items = List::new(items)
         .block(
             Block::default()
-                .title("Shortcuts")
-                .border_style(Style::default().fg(Color::White))
+                .title(Span::styled(
+                    "Shortcuts",
+                    Style::default()
+                        .fg(Color::LightCyan)
+                        .add_modifier(Modifier::BOLD),
+                ))
+                .border_style(Style::default().fg(Color::LightBlue))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded),
         )
         .highlight_style(
             Style::default()
                 .fg(Color::LightCyan)
-                .bg(Color::Black)
+                // .bg(Color::Black)
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("> ");
