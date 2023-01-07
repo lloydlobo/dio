@@ -14,11 +14,11 @@ const LIST_SHORTCUTS: [&str; 5] = [
 ];
 
 // const TITLES: [&str; 4] = ["Home", "Facts", "Principles", "Input"];
-const TAB_TITLES: [TabMode; 4] = [
+const TAB_TITLES: [TabMode; 3] = [
     TabMode::Home(0usize, "Home"),
     TabMode::Facts(1usize, "Facts"),
     TabMode::Principles(2usize, "Principles"),
-    TabMode::Input(3usize, "Input"),
+    // TabMode::Input(3usize, "Input"),
 ];
 
 /// Index of tab in application and title.
@@ -43,9 +43,6 @@ pub struct App<'a> {
     pub tabs: TabsState<TabMode<'a>>,
     /// '?' activates the help popup modal.
     pub show_help_popup: bool,
-    /// If popup opens, the state forgets what tab it was open on.
-    /// FIXME: Code smell. Use popup state as a Tab and do not render as tab in ui.
-    // pub cache_prev_list_on_popup: ListName,
     /// The `tick_rate' of the application.
     pub progress: f64,
     /// List from database.
@@ -65,6 +62,8 @@ pub struct App<'a> {
     /// Current value of the input box.
     pub input: String,
     /// Previews list items when hovered, or selected.
+    /// Facts page, Principles page. Each have lists of condensed titles.
+    /// When one selects a item, it expands. or opens a dialog buffer.
     pub preview_item: String,
     /// Current input mode.
     pub input_mode: InputMode,
@@ -82,9 +81,6 @@ fn get_map_val(hash: &HashMap<String, String>) -> Vec<&str> {
         .collect::<Vec<_>>()
         .to_vec()
 }
-
-/// Facts page, Principles page. Each have lists of condensed titles.
-/// When one selects a item, it expands. or opens a dialog buffer.
 
 impl<'a> App<'a> {
     pub fn new(title: &'a str, db: &'a DB, enhanced_graphics: bool) -> Self {

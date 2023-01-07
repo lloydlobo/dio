@@ -3,7 +3,6 @@
 use crate::app::{self, App};
 use std::{
     borrow::Cow,
-    collections::HashMap,
     fmt::{Binary, Debug, LowerHex, Octal, UpperHex},
     string::String,
 };
@@ -52,7 +51,7 @@ where
             app::TabMode::Home(_, t) => Some(Cow::from(*t)),
             app::TabMode::Facts(_, t) => Some(Cow::from(*t)),
             app::TabMode::Principles(_, t) => Some(Cow::from(*t)),
-            app::TabMode::Input(_, t) => Some(Cow::from(*t)),
+            app::TabMode::Input(_, _t) => None,
             app::TabMode::PopupHelp(_, _t) => None,
         })
         .map(|t| {
@@ -86,7 +85,7 @@ where
         0 => draw_tab_0_home(f, app, chunks[(index_from(Chunk::Body))]),
         1 => draw_tab_1_facts(f, app, chunks[(index_from(Chunk::Body))]),
         2 => draw_tab_2_principles(f, app, chunks[(index_from(Chunk::Body))]),
-        3 => draw_tab_3_inputs(f, app, chunks[(index_from(Chunk::Body))]),
+        // 3 => draw_tab_3_inputs(f, app, chunks[(index_from(Chunk::Body))]),
         _ => {}
     }
 
